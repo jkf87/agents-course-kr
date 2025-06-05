@@ -28,3 +28,13 @@
     title: 마무리
   - local: unit4/additional-readings
     title: 이후 학습 주제
+- title: 보너스 유닛 1. 함수 호출용 LLM 파인튜닝
+  sections:
+  - local: bonus-unit1/introduction
+    title: 소개
+  - local: bonus-unit1/what-is-function-calling
+    title: 함수 호출이란?
+  - local: bonus-unit1/fine-tuning
+    title: 함수 호출용 모델 파인튜닝하기
+  - local: bonus-unit1/conclusion
+    title: 마무리
