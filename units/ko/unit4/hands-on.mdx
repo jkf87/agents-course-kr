@@ -1,0 +1,51 @@
+# 실습
+
+이제 최종 에이전트 제작을 더 깊이 진행할 준비가 되었다면, 검토를 위해 어떻게 제출할 수 있는지 알아봅시다.
+
+## 데이터셋
+
+이 리더보드에 사용되는 데이터셋은 GAIA **검증** 세트의 레벨 1 질문에서 추출한 20개 질문으로 구성되어 있습니다.
+
+선택된 질문들은 답변에 필요한 도구와 단계 수를 기준으로 필터링되었습니다.
+
+현재 GAIA 벤치마크 상황을 볼 때 레벨 1 질문에서 30% 달성을 목표로 삼는 것이 적절한 테스트라고 생각합니다.
+
+<img src="https://huggingface.co/datasets/agents-course/course-images/resolve/main/en/unit4/leaderboard%20GAIA%2024%3A04%3A2025.png" alt="GAIA current status!" />
+
+## 진행 과정
+
+이제 가장 큰 궁금증은 아마 "어떻게 제출을 시작해야 할까?"일 것입니다.
+
+이 단원에서는 질문을 받아 답안을 채점용으로 제출할 수 있는 API를 만들었습니다. 다음은 각 라우트 요약입니다(자세한 내용은 [라이브 문서](https://agents-course-unit4-scoring.hf.space/docs)를 참고하세요).
+
+* **`GET /questions`**: 필터링된 평가 질문 전체 목록을 가져옵니다.
+* **`GET /random-question`**: 목록에서 무작위 질문 하나를 가져옵니다.
+* **`GET /files/{task_id}`**: 특정 작업 ID와 연결된 파일을 다운로드합니다.
+* **`POST /submit`**: 에이전트 답안을 제출해 점수를 계산하고 리더보드를 갱신합니다.
+
+답안 제출 기능은 정답과 **완전히 일치**하는지 비교하므로 프롬프트를 신중하게 작성해야 합니다! GAIA 팀은 [여기](https://huggingface.co/spaces/gaia-benchmark/leaderboard)에 에이전트를 위한 프롬프트 예시를 공유했습니다(이 과정을 위해 제출 시 "FINAL ANSWER"라는 문구를 포함하지 말고, 오직 답변만 반환하도록 하세요).
+
+🎨 **템플릿을 자유롭게 수정하세요!**
+
+API와 상호작용하는 과정을 보여주기 위해 [기본 템플릿](https://huggingface.co/spaces/agents-course/Final_Assignment_Template)을 제공했습니다.
+
+원하는 대로 변경하거나 내용을 추가하거나 완전히 재구성해도 좋습니다. 자신에게 가장 잘 맞는 방식으로 자유롭게 수정해 보세요.
+
+제출하려면 API가 요구하는 세 가지 정보를 계산해야 합니다:
+
+* **Username:** Hugging Face 사용자 이름(여기서는 Gradio 로그인을 통해 얻습니다). 제출을 식별하는 데 사용됩니다.
+* **코드 링크(`agent_code`):** 검증을 위해 Hugging Face Space 코드(`.../tree/main`)로 연결되는 URL이므로 Space를 공개로 유지하세요.
+* **답변(`answers`):** 채점을 위해 에이전트가 생성한 응답 목록(`{"task_id": ..., "submitted_answer": ...}`).
+
+따라서 [이 템플릿](https://huggingface.co/spaces/agents-course/Final_Assignment_Template)을 복제해 본인의 Hugging Face 프로필에서 시작해 보길 권장합니다.
+
+🏆 [여기](https://huggingface.co/spaces/agents-course/Students_leaderboard)에서 리더보드를 확인해 보세요.
+
+*친근한 안내: 이 리더보드는 재미를 위한 것입니다! 공개 링크 없이 높은 점수만 잔뜩 올라오면 유용성이 떨어질 수 있으므로, 필요한 경우 점수를 검토하거나 조정하거나 항목을 제거할 수도 있습니다.*
+리더보드에는 당신의 Space 코드 링크가 표시됩니다. 이 리더보드는 학생 전용이므로, 만족스러운 점수를 얻었다면 Space를 공개 상태로 유지해 주세요.
+<iframe
+        src="https://agents-course-students-leaderboard.hf.space"
+        frameborder="0"
+        width="850"
+        height="450"
+></iframe>

@@ -1,0 +1,67 @@
+# GAIA란?
+
+[GAIA](https://huggingface.co/papers/2311.12983)는 **추론, 멀티모달 이해, 웹 탐색, 도구 사용 능력** 등 핵심 역량을 조합해 실제 문제를 해결하는 AI 어시스턴트를 평가하기 위한 **벤치마크**입니다.
+
+이 벤치마크는 논문 _"[GAIA: A Benchmark for General AI Assistants](https://huggingface.co/papers/2311.12983)"_에서 소개되었습니다.
+
+이 벤치마크에는 **사람에게는 개념적으로 간단하지만 현재 AI에게는 매우 어려운** **466개의 엄선된 질문**이 포함되어 있습니다.
+
+차이를 보여 주기 위해 몇 가지 예를 들면:
+- **인간**: 약 92% 성공률
+- **GPT-4(플러그인 사용)**: 약 15%
+- **Deep Research(OpenAI)**: 검증 세트 기준 67.36%
+
+GAIA는 현재 AI 모델의 한계를 잘 보여 주며, 범용 AI 어시스턴트를 향한 발전 수준을 평가할 수 있는 엄격한 기준을 제공합니다.
+
+## 🌱 GAIA의 핵심 원칙
+
+GAIA는 다음과 같은 원칙을 기반으로 세심하게 설계되었습니다:
+- 🔍 **현실적인 난이도**: 여러 단계를 거치는 추론과 멀티모달 이해, 도구 사용이 요구됩니다.
+- 🧾 **인간이 이해하기 쉬움**: AI에게는 어렵지만 사람에게는 개념적으로 단순해 따라가기 쉽습니다.
+- 🛡️ **임의로 점수를 올리기 어려움**: 올바른 답을 위해선 전체 과정을 수행해야 하므로 무작위 시도가 통하지 않습니다.
+- 🧰 **평가의 단순성**: 답변이 간결하고 사실에 기반하며 모호하지 않아 벤치마크에 적합합니다.
+
+## 난이도 수준
+
+GAIA의 문제는 난이도에 따라 **세 단계**로 구성되어 있으며, 각 단계는 특정 능력을 시험합니다:
+- **1단계**: 5단계 미만의 과정과 최소한의 도구 사용으로 해결 가능합니다.
+- **2단계**: 더 복잡한 추론과 여러 도구 간의 조정이 필요하며 5~10단계를 요구합니다.
+- **3단계**: 장기적인 계획과 다양한 도구의 고도화된 통합이 필요합니다.
+
+![GAIA levels](https://huggingface.co/datasets/agents-course/course-images/resolve/main/en/unit4/gaia_levels.png)
+
+## 어려운 GAIA 질문 예시
+
+> 2008년 그림 "Embroidery from Uzbekistan"에 그려진 과일 중 어떤 것이, 이후 영화 "The Last Voyage"의 부유 소품으로 사용된 대형 여객선의 1949년 10월 아침 식사 메뉴에 포함되었나요? 그림에서 12시 방향부터 시계 방향으로 배열된 순서대로 복수형으로, 쉼표로 구분해 나열하세요.
+
+보시다시피, 이 질문은 여러 측면에서 AI 시스템에 도전이 됩니다:
+- **구조화된 응답 형식**이 필요함
+- **멀티모달 추론**(예: 이미지 분석)을 요구
+- 상호 연관된 사실을 **여러 단계에 걸쳐 검색**해야 함:
+  - 그림 속 과일을 파악
+  - 영화 *The Last Voyage*에 사용된 여객선을 알아냄
+  - 그 배의 1949년 10월 아침 식사 메뉴를 찾아봄
+- 정확한 순서와 고도의 계획이 필요함
+
+이러한 문제는 단독 LLM의 한계를 보여 주며, 여러 단계와 모달리티에 걸쳐 추론·검색·실행할 수 있는 **에이전트 기반 시스템**에 GAIA가 적합한 벤치마크임을 의미합니다.
+
+![GAIA capabilities plot](https://huggingface.co/datasets/agents-course/course-images/resolve/main/en/unit4/gaia_capabilities.png)
+
+## 실시간 평가
+
+지속적인 벤치마크를 장려하기 위해 **GAIA는 Hugging Face에서 운영되는 공개 리더보드**를 제공하며, 여기서 **300개의 테스트 질문**으로 모델을 평가할 수 있습니다.
+
+👉 리더보드는 [여기](https://huggingface.co/spaces/gaia-benchmark/leaderboard)에서 확인하세요.
+
+<iframe
+        src="https://gaia-benchmark-leaderboard.hf.space"
+        frameborder="0"
+        width="850"
+        height="450"
+></iframe>
+
+GAIA에 대해 더 알아보고 싶다면?
+- 📄 [논문 전문 읽기](https://huggingface.co/papers/2311.12983)
+- 📄 [OpenAI의 Deep Research 발표 글](https://openai.com/index/introducing-deep-research/)
+- 📄 [오픈소스 DeepResearch – 검색 에이전트의 자유](https://huggingface.co/blog/open-deep-research)
+

@@ -69,7 +69,12 @@ Please translate the following text to vietnamese:
 === END OF TEXT ===
 '''.strip()
 
-auto_translate(
-    prompt=prompt,
-    output_lang=output_lang,
-)
+def main() -> None:
+    auto_translate(
+        prompt=prompt,
+        output_lang=output_lang,
+    )
+
+
+if __name__ == "__main__":
+    main()

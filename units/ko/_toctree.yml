@@ -1,0 +1,30 @@
+- title: 유닛 0. 코스에 오신 것을 환영합니다
+  sections:
+  - local: unit0/introduction
+    title: 코스 소개
+  - local: unit0/onboarding
+    title: 온보딩
+  - local: unit0/discord101
+    title: (선택) Discord 101
+- title: 유닛 2. 에이전틱 프레임워크
+  sections:
+  - local: unit2/introduction
+    title: 에이전틱 프레임워크 소개
+- title: 유닛 3. Agentic RAG 활용 예제
+  sections:
+  - local: unit3/agentic-rag/introduction
+    title: Agentic RAG 예제 소개
+- title: 유닛 4. 최종 프로젝트 - 에이전트 만들기, 테스트, 인증
+  sections:
+  - local: unit4/introduction
+    title: 마지막 유닛 소개
+  - local: unit4/what-is-gaia
+    title: GAIA란?
+  - local: unit4/hands-on
+    title: 최종 실습
+  - local: unit4/get-your-certificate
+    title: 인증서 받기
+  - local: unit4/conclusion
+    title: 마무리
+  - local: unit4/additional-readings
+    title: 이후 학습 주제
