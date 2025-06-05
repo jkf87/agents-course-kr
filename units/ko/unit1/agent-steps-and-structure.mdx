@@ -1,0 +1,150 @@
+# 사고 조치 관찰주기를 통해 AI 에이전트를 이해합니다 
+
+<img src="https://huggingface.co/datasets/agents-course/course-images/resolve/main/en/unit1/whiteboard-check-3.jpg" alt="Unit 1 planning"/>
+
+이전 섹션에서는 다음과 같이 배웠습니다.
+
+- ** 시스템 프롬프트의 에이전트가 도구를 제공하는 방법 **.
+- ** AI 에이전트가 '이유', 계획 및 환경과 상호 작용할 수있는 시스템의 방법 **.
+
+이 섹션에서는 ** 우리는 우리가 생각 행동 관찰로 정의한주기 인 전체 AI 에이전트 워크 플로우 **를 탐색 할 것입니다.
+
+그런 다음이 각 단계에서 더 깊이 뛰어들 것입니다.
+
+
+## 핵심 구성 요소 
+
+에이전트는 다음과 같은 연속 주기로 작동합니다. ** 사고 (생각) → 연기 (행위) 및 관찰 (관찰) **.
+
+이러한 작업을 함께 분류합시다.
+
+1. ** 생각 ** : 에이전트의 LLM 부분은 다음 단계가 무엇인지 결정합니다.
+2. ** 조치 : ** 에이전트는 관련 인수와 함께 도구를 호출하여 조치를 취합니다.
+3. ** 관찰 : ** 모델은 도구의 응답을 반영합니다.
+
+## 사고 조치 관찰주기 
+
+세 가지 구성 요소는 연속 루프로 함께 작동합니다.에이전트는 프로그래밍에서 비유를 사용하기 위해 A ** whine loop **을 사용합니다.
+
+시각적으로 다음과 같이 보입니다.
+
+<img src="https://huggingface.co/datasets/agents-course/course-images/resolve/main/en/unit1/AgentCycle.gif" alt="Think, Act, Observe cycle"/>
+
+많은 에이전트 프레임 워크에서 ** 규칙과 지침은 시스템 프롬프트 **에 직접 내장되어 모든 사이클이 정의 된 논리에 부착되도록합니다.
+
+단순화 된 버전에서는 시스템 프롬프트가 다음과 같습니다.
+
+<img src="https://huggingface.co/datasets/agents-course/course-images/resolve/main/en/unit1/system_prompt_cycle.png" alt="Think, Act, Observe cycle"/>
+
+여기서 우리는 시스템 메시지에서 다음을 정의했습니다.
+
+- *에이전트의 행동 *.
+- 이전 섹션에서 설명한대로 상담원이 *에 액세스 할 수있는 도구 *.
+-LLM 지시 사항에 굽는 *생각 행동 관찰주기 *.
+
+프로세스의 각 단계에 더 깊이 들어가기 전에 프로세스를 이해하기 위해 작은 예를 들어 봅시다.
+
+## 날씨 에이전트 인 알프레드 
+
+우리는 날씨 에이전트 인 Alfred를 만들었습니다.
+
+한 사용자는 Alfred에게 다음과 같이 묻습니다.“뉴욕의 현재 날씨는 어떻습니까?”
+
+<img src="https://huggingface.co/datasets/agents-course/course-images/resolve/main/en/unit1/alfred-agent.jpg" alt="Alfred Agent"/>
+
+Alfred의 임무는 날씨 API 도구를 사용 하여이 쿼리에 답하는 것입니다.
+
+주기가 전개되는 방법은 다음과 같습니다.
+
+### 생각 
+
+** 내부 추론 : **
+
+쿼리를 받으면 Alfred의 내부 대화는 다음과 같습니다.
+
+*"사용자는 뉴욕의 현재 날씨 정보가 필요합니다. 날씨 데이터를 가져 오는 도구에 액세스 할 수 있습니다. 첫째, 날씨 API에 전화하여 최신 정보를 얻으려면"*.
+
+이 단계는 에이전트가 문제를 단계로 나누는 것을 보여줍니다. 첫째, 필요한 데이터를 수집합니다.
+
+<img src="https://huggingface.co/datasets/agents-course/course-images/resolve/main/en/unit1/alfred-agent-1.jpg" alt="Alfred Agent"/>
+
+### 행동 
+
+** 도구 사용 : **
+
+Alfred는 추론과 Alfred가 'get_weather'도구에 대해 알고 있다는 사실을 바탕으로 Weather API 도구를 호출하는 JSON 형식의 명령을 준비합니다.예를 들어, 첫 번째 조치는 다음과 같습니다.
+
+생각 : 뉴욕의 현재 날씨를 확인해야합니다.
+
+ ```
+    {
+      "action": "get_weather",
+      "action_input": {
+        "location": "New York"
+      }
+    }
+ ```
+
+여기서,이 작업은 호출 할 도구 (예 : get_weather)와 전달할 매개 변수 ( "위치": "New York")를 명확하게 지정합니다.
+
+<img src="https://huggingface.co/datasets/agents-course/course-images/resolve/main/en/unit1/alfred-agent-2.jpg" alt="Alfred Agent"/>
+
+### 관찰 
+
+** 환경의 피드백 : **
+
+공구 통화 후 Alfred는 관찰을받습니다.이것은 다음과 같은 API의 날씨 데이터 일 수 있습니다.
+
+*"뉴욕의 현재 날씨 : 부분적으로 흐린, 15 ° C, 60% 습도."*
+
+<img src="https://huggingface.co/datasets/agents-course/course-images/resolve/main/en/unit1/alfred-agent-3.jpg" alt="Alfred Agent"/>
+
+그런 다음이 관찰은 추가 컨텍스트로 프롬프트에 추가됩니다.그것은 실제 피드백으로 기능하여 행동이 성공했는지 확인하고 필요한 세부 사항을 제공합니다.
+
+
+### 업데이트 된 생각 
+
+** 반영 : **
+
+Alfred는 관찰을 통해 내부 추론을 업데이트합니다.
+
+*"이제 뉴욕의 날씨 데이터가 있으므로 사용자를위한 답변을 편집 할 수 있습니다."*
+
+<img src="https://huggingface.co/datasets/agents-course/course-images/resolve/main/en/unit1/alfred-agent-4.jpg" alt="Alfred Agent"/>
+
+
+### 최종 행동 
+
+그런 다음 Alfred는 다음과 같이 말한대로 포맷 된 최종 응답을 생성합니다.
+
+생각 : 지금 날씨 데이터가 있습니다.뉴욕의 현재 날씨는 15 ° C의 온도와 60% 습도로 부분적으로 흐려집니다. "
+
+최종 답변 : 뉴욕의 현재 날씨는 15 ° C 온도와 60% 습도로 부분적으로 흐려집니다.
+
+이 최종 조치는 응답을 사용자에게 다시 보내고 루프를 닫습니다.
+
+
+<img src="https://huggingface.co/datasets/agents-course/course-images/resolve/main/en/unit1/alfred-agent-5.jpg" alt="Alfred Agent"/>
+
+
+이 예에서 볼 수있는 것 :
+
+- ** 대리인은 목표가 충족 될 때까지 루프를 반복합니다. **
+
+** Alfred의 과정은 주기적입니다 **.그것은 생각으로 시작한 다음 도구를 부르며 행동하며 결국 결과를 관찰합니다.관찰에 오류 또는 불완전한 데이터가 표시되면 Alfred는주기를 다시 입력하여 접근 방식을 수정할 수있었습니다.
+
+- ** 도구 통합 : **
+
+날씨 API와 같은 도구를 호출하는 기능을 통해 Alfred는 정적 지식을 넘어서 ** 많은 AI 에이전트의 필수 측면 인 실시간 데이터 **를 검색 할 수 있습니다.
+
+- ** 동적 적응 : **
+
+각주기는 에이전트가 새로운 정보 (관찰)를 추론 (사고)에 통합 할 수 있도록하여 최종 답변이 잘 알고 있고 정확한지 확인할 수 있습니다.
+
+이 예는*React Cycle*(다음 섹션에서 개발할 개념)의 핵심 개념을 보여줍니다. ** 생각, 행동 및 관찰의 상호 작용은 AI 에이전트가 복잡한 작업을 반복적으로 해결할 수 있도록합니다.
+
+이러한 원칙을 이해하고 적용함으로써 작업에 대한 이유뿐만 아니라 외부 도구를 효과적으로 활용하여 환경 피드백을 기반으로 출력을 지속적으로 정제하는 에이전트를 설계 할 수 있습니다.
+
+---
+
+이제 프로세스의 개별 단계로서 생각, 행동, 관찰에 대해 더 깊이 뛰어 들어 봅시다.

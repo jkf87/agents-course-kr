@@ -1,0 +1,223 @@
+# LLM은 무엇입니까? 
+
+<img src="https://huggingface.co/datasets/agents-course/course-images/resolve/main/en/unit1/whiteboard-check-1.jpg" alt="Unit 1 planning"/>
+
+이전 섹션에서 우리는 각 에이전트가 ** 핵심 **의 AI 모델이 필요하며 LLM 이이 목적을 위해 가장 일반적인 유형의 AI 모델이라는 것을 알게되었습니다.
+
+이제 우리는 LLM이 무엇인지, 이들이 전원 에이전트를 배울 것입니다.
+
+This section offers a concise technical explanation of the use of LLMs. If you want to dive deeper, you can check our <a href="https://huggingface.co/learn/nlp-course/chapter1/1" target="_blank">free Natural Language Processing Course</a>.
+
+## 큰 언어 모델은 무엇입니까? 
+
+LLM은 인간 언어 **를 이해하고 생성하는 데 탁월한 AI 모델의 한 유형입니다.그들은 방대한 양의 텍스트 데이터에 대해 교육을 받았으며, 패턴, 구조, 심지어 언어의 뉘앙스를 배울 수 있습니다.이 모델은 일반적으로 수백만 개의 매개 변수로 구성됩니다.
+
+오늘날 대부분의 LLM은 Transformer Architecture **를 기반으로합니다. "주의"알고리즘을 기반으로 한 딥 러닝 아키텍처는 2018 년 Google에서 Bert가 출시 된 이후 상당한 관심을 얻었습니다.
+
+<그림>
+<img src="https://huggingface.co/datasets/agents-course/course-images/resolve/main/en/unit1/transformer.jpg" alt="Transformer"/>
+<Figcaption> 원래 변압기 아키텍처는 왼쪽에 인코더와 오른쪽에 디코더가있는 것처럼 보였습니다.
+</figcaption>
+</그림>
+
+변압기에는 3 가지 유형이 있습니다.
+
+1. ** 인코더 **
+인코더 기반 변압기는 텍스트 (또는 기타 데이터)를 입력으로 가져 와서 해당 텍스트의 조밀 한 표현 (또는 포함)을 출력합니다.
+
+- ** 예 : Google의 Bert
+- ** 사용 사례 ** : 텍스트 분류, 시맨틱 검색, 명명 된 엔티티 인식
+- ** 일반적인 크기 ** : 수백만 개의 매개 변수
+
+2. ** 디코더 **
+디코더 기반 변압기는 **에 초점을 맞 춥니 다.
+
+- ** 예 ** : 메타에서 라마
+- ** 사용 사례 ** : 텍스트 생성, 챗봇, 코드 생성
+- ** 전형적인 크기 ** : 수십억 (미국 의미, 즉 10^9)의 매개 변수
+
+3. ** seq2seq (Encoder -decoder) **
+서열-시퀀스 변압기 _combines_ 인코더 및 디코더.인코더는 먼저 입력 시퀀스를 컨텍스트 표현으로 처리 한 다음 디코더는 출력 시퀀스를 생성합니다.
+
+- ** 예제 ** : T5, 바트
+- ** 사용 사례 ** : 번역, 요약, 역설
+- ** 일반적인 크기 ** : 수백만 개의 매개 변수
+
+대형 언어 모델은 다양한 형태로 제공되지만 LLM은 일반적으로 수십억 개의 매개 변수를 가진 디코더 기반 모델입니다.가장 잘 알려진 LLM은 다음과 같습니다.
+
+|** 모델 ** |** 제공자 **
+| ---------------------------------------------------------------------------------- |
+|** DeepSeek-R1 ** |Deepseek |
+|** gpt4 ** |Openai |
+|** 전화 3 ** |목표 (Facebook AI Research) |
+|** smollm2 ** |포옹 얼굴 |
+|** 젬마 ** |Google |
+|** 미스트랄 ** |미스트랄 |
+
+LLM의 기본 원리는 간단하면서도 매우 효과적입니다. ** 목표는 이전 토큰의 시퀀스를 고려할 때 다음 토큰을 예측하는 것입니다 **."토큰"은 LLM과 함께 작동하는 정보 단위입니다."토큰"을 마치 "단어"인 것처럼 생각할 수 있지만 효율적인 이유로 LLM은 전체 단어를 사용하지 않습니다.
+
+예를 들어, 영어에는 약 60 만 단어가 있지만 LLM의 어휘는 약 32,000 개의 토큰을 가질 수 있습니다 (LLAMA 2의 경우와 같이).토큰 화는 종종 결합 할 수있는 하위 단어 단위에서 작동합니다.
+
+예를 들어, 토큰 "관심"과 "ing"을 결합하여 "흥미로운"형성을 형성하거나 "Ed"를 추가하여 "관심"을 형성 할 수있는 방법을 고려하십시오.
+
+아래의 대화식 놀이터에서 다른 토큰 화제를 실험 할 수 있습니다.
+
+<iframe
+	src="https://agents-course-the-tokenizer-playground.static.hf.space"
+frameter = "0"
+너비 = "850"
+높이 = "450"
+> </ iframe>
+
+각 LLM에는 모델에 맞는 ** 특수 토큰 **가 있습니다.LLM은 이러한 토큰을 사용하여 생성의 구조화 된 구성 요소를 열고 닫습니다.예를 들어, 시퀀스, 메시지 또는 응답의 시작 또는 끝을 나타냅니다.또한, 우리가 모델에 전달하는 입력 프롬프트는 또한 특수 토큰으로 구성됩니다.그 중 가장 중요한 것은 시퀀스 토큰 ** (EOS)의 끝입니다.
+
+특수 토큰의 형태는 모델 제공 업체에 따라 매우 다양합니다.
+
+아래 표는 특수 토큰의 다양성을 보여줍니다.
+
+<테이블>
+<Thead>
+<tr>
+<The> <strong> 모델 </strong> </th>
+<th> <strong> 제공자 </strong> </th>
+<th> <strong> EOS 토큰 </strong> </th>
+<th> <strong> 기능 </strong> </th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td> <strong> gpt4 </strong> </td>
+<td> openai </td>
+<td> <code> & lt; | endoftext | & gt; </code> </td>
+<td> 메시지 종료 텍스트 </td>
+</tr>
+<tr>
+<td> <strong> llama 3 </strong> </td>
+<td> 메타 (Facebook AI Research) </td>
+<td> <code> & lt; | eot_id | & gt; </code> </td>
+<td> 시퀀스 끝 </td>
+</tr>
+<tr>
+<td> <strong> Deepseek-R1 </strong> </td>
+<td> Deepseek </td>
+<td> <cod> & lt; | end_of_sentence | & gt; </code> </td>
+<td> 메시지 종료 텍스트 </td>
+</tr>
+<tr>
+<td> <strong> smollm2 </strong> </td>
+<td> 포옹 얼굴 </td>
+<td> <code> & lt; | im_end | & gt; </code> </td>
+<td> 명령 또는 메시지 종료 </td>
+</tr>
+<tr>
+<td> <strong> 젬마 </strong> </td>
+<td> Google </td>
+<td> <cod> & lt; end_of_turn & gt; </code> </td>
+<td> 대화 종료 회전 </td>
+</tr>
+</body>
+</테이블>
+
+<팁>
+
+We do not expect you to memorize these special tokens, but it is important to appreciate their diversity and the role they play in the text generation of LLMs. If you want to know more about special tokens, you can check out the configuration of the model in its Hub repository. For example, you can find the special tokens of the SmolLM2 model in its <a href="https://huggingface.co/HuggingFaceTB/SmolLM2-135M-Instruct/blob/main/tokenizer_config.json">tokenizer_config.json</a>.
+
+</팁>
+
+## 다음 토큰 예측 이해. 
+
+llms는 ** 자동 회귀 **라고합니다. 이는 ** 한 번의 패스의 출력이 다음 중 하나의 입력이된다는 것을 의미합니다.이 루프는 모델이 다음 토큰이 EOS 토큰이 될 때까지 계속됩니다.이 시점에서 모델이 중지 될 수 있습니다.
+
+<img src="https://huggingface.co/datasets/agents-course/course-images/resolve/main/en/unit1/AutoregressionSchema.gif" alt="Visual Gif of autoregressive decoding" width="60%">
+
+다시 말해, LLM은 텍스트가 EOS에 도달 할 때까지 해독됩니다.그러나 단일 디코딩 루프 중에는 어떻게됩니까?
+
+전체 프로세스는 학습 에이전트의 목적으로 매우 기술적 일 수 있지만 다음은 간단한 개요가 있습니다.
+
+- 입력 텍스트가 ** 토큰 화 **이면 모델은 입력 순서에서 각 토큰의 의미와 위치에 대한 정보를 캡처하는 시퀀스의 표현을 계산합니다.
+-이 표현은 모델에 들어가며, 이는 어휘의 각 토큰의 가능성을 순서대로 다음과 같은 것으로 평가하는 점수를 출력합니다.
+
+<img src="https://huggingface.co/datasets/agents-course/course-images/resolve/main/en/unit1/DecodingFinal.gif" alt="Visual Gif of decoding" width="60%">
+
+이 점수를 바탕으로 문장을 완성하기 위해 토큰을 선택하는 여러 전략이 있습니다.
+
+- 가장 쉬운 디코딩 전략은 항상 최대 점수로 토큰을 가져가는 것입니다.
+
+이 공간에서 Smollm2와 디코딩 프로세스와 상호 작용할 수 있습니다 (이 모델의 경우 ** eos ** 토큰에 도달 할 때까지 디코딩됩니다).
+
+<iframe
+	src="https://agents-course-decoding-visualizer.hf.space"
+frameter = "0"
+너비 = "850"
+높이 = "450"
+> </ iframe>
+
+- 그러나 더 고급 디코딩 전략이 있습니다.예를 들어, * Beam Search *는 여러 후보 시퀀스를 탐색하여 일부 개별 토큰의 점수가 낮은 경우에도 최대 총 점수를 가진 최대 후보 시퀀스를 찾습니다.
+
+<iframe
+	src="https://agents-course-beam-search-visualizer.hf.space"
+frameter = "0"
+너비 = "850"
+높이 = "450"
+> </ iframe>
+
+If you want to know more about decoding, you can take a look at the [NLP course](https://huggingface.co/learn/nlp-course).
+
+## 주의를 기울이기 만하면됩니다 
+
+변압기 아키텍처의 주요 측면은 **주의 **입니다.다음 단어를 예측할 때
+문장의 모든 단어가 똑같이 중요한 것은 아닙니다.문장의 "프랑스"와 "자본"과 같은 단어 * "프랑스의 수도는 ..." * 가장 의미가 있습니다.
+
+<img src="https://huggingface.co/datasets/agents-course/course-images/resolve/main/en/unit1/AttentionSceneFinal.gif" alt="Visual Gif of Attention" width="60%">
+다음 토큰을 예측하기 위해 가장 관련성이 높은 단어를 식별하는이 과정은 엄청나게 효과적인 것으로 입증되었습니다.
+
+GPT-2 이후 LLM의 기본 원리 (다음 토큰을 예측하는)는 일관성을 유지했지만 신경망을 스케일링하고주의 메커니즘이 더 길고 긴 서열에 대한 관심 메커니즘을 작동시키는 데 상당한 발전이있었습니다.
+
+LLM과 상호 작용 한 경우 LLM이 처리 할 수있는 최대 토큰 수와 최대 _attention Span_라는 용어에 익숙 할 것입니다.
+
+## LLM을 촉구하는 것이 중요합니다 
+
+LLM의 유일한 작업은 모든 입력 토큰을보고 다음 토큰을 예측하고 "중요한"토큰을 선택하는 것이 입력 순서의 문구가 매우 중요합니다.
+
+LLM을 제공하는 입력 순서를 _A 프롬프트라고합니다.신중한 프롬프트를 신중하게 설계하면 LLM의 생성을 원하는 출력 **로 안내 할 수 있습니다.
+
+## LLM은 어떻게 훈련됩니까? 
+
+LLM은 대규모 텍스트 데이터 세트에 대해 교육을받으며, 여기서 자체 감독 또는 마스크 된 언어 모델링 목표를 통해 다음 단어를 순서대로 예측하는 법을 배웁니다.
+
+이 감독되지 않은 학습에서 모델은 언어의 구조와 ** 텍스트의 기본 패턴을 배우고 모델이 보이지 않는 데이터로 일반화 할 수 있도록합니다.
+
+이 초기 _pre-training_ 이후, 특정 작업을 수행하기 위해 감독 된 학습 목표에 대해 LLM을 미세 조정할 수 있습니다.예를 들어, 일부 모델은 대화 구조 또는 공구 사용에 대해 교육을 받고 다른 모델은 분류 또는 코드 생성에 중점을 둡니다.
+
+## LLM을 어떻게 사용할 수 있습니까? 
+
+두 가지 주요 옵션이 있습니다.
+
+1. ** 로컬로 실행 ** (하드웨어가 충분한 경우).
+
+2. ** 클라우드/API ** (예 : Hugging Face Serverless 추론 API를 통해)를 사용하십시오.
+
+이 과정에서 우리는 주로 Hugging Face Hub의 API를 통해 모델을 사용합니다.나중에, 우리는 하드웨어 에서이 모델을 로컬로 실행하는 방법을 살펴볼 것입니다.
+
+
+## LLM은 AI 에이전트에서 어떻게 사용됩니까? 
+
+LLM은 AI 에이전트의 핵심 구성 요소이며, ** 인간 언어를 이해하고 생성하기위한 토대를 제공 ** **.
+
+사용자 지침을 해석하고 대화에서 맥락을 유지하며 계획을 정의하며 사용할 도구를 결정할 수 있습니다.
+
+우리는이 단원에서 이러한 단계를 더 자세히 살펴볼 것이지만, 지금은 당신이 이해해야 할 것은 LLM이 ** 에이전트 **의 뇌라는 것입니다.
+
+---
+
+그것은 많은 정보였습니다!우리는 LLM이 무엇인지, 작동 방식 및 AI 에이전트에 전원을 공급하는 역할의 기본 사항을 다루었습니다.
+
+If you'd like to dive even deeper into the fascinating world of language models and natural language processing, don't hesitate to check out our <a href="https://huggingface.co/learn/nlp-course/chapter1/1" target="_blank">free NLP course</a>.
+
+이제 우리는 LLMS의 작동 방식을 이해하므로 이제 LLMS가 대화 적 맥락에서 어떻게 세대를 구조화하는지 **를 볼 차례입니다.
+
+To run <a href="https://huggingface.co/agents-course/notebooks/blob/main/unit1/dummy_agent_library.ipynb" target="_blank">this notebook</a>, **you need a Hugging Face token** that you can get from <a href="https://hf.co/settings/tokens" target="_blank">https://hf.co/settings/tokens</a>.
+
+For more information on how to run Jupyter Notebooks, checkout <a href="https://huggingface.co/docs/hub/notebooks">Jupyter Notebooks on the Hugging Face Hub</a>.
+
+You also need to request access to <a href="https://huggingface.co/meta-llama/Llama-3.2-3B-Instruct" target="_blank">the Meta Llama models</a>.

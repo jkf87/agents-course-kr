@@ -1,0 +1,228 @@
+# 메시지와 특별 토큰 
+
+이제 우리는 LLM이 어떻게 작동하는지 이해하므로 채팅 템플릿을 통해 세대를 어떻게 구성하는지 **를 살펴 보겠습니다. **.
+
+Chatgpt와 마찬가지로 사용자는 일반적으로 채팅 인터페이스를 통해 에이전트와 상호 작용합니다.따라서 LLMS가 채팅을 관리하는 방법을 이해하는 것을 목표로합니다.
+
+> ** Q ** :하지만 ... 때, 나는 Chatgpt/Hugging Chat과 상호 작용하고 있는데, 단일 프롬프트 시퀀스가 ​​아니라 채팅 메시지를 사용하여 대화를 나누고 있습니다.
+>
+> ** A ** : 맞습니다!그러나 이것은 실제로 UI 추상화입니다.LLM에 공급되기 전에 대화의 모든 메시지가 단일 프롬프트로 연결됩니다.이 모델은 대화를 "기억"하지 않습니다. 대화는 매번 전체적으로 읽습니다.
+
+지금까지 우리는 모델에 공급 된 토큰의 순서로 프롬프트를 논의했습니다.그러나 Chatgpt 또는 HuggingChat과 같은 시스템과 채팅하면 실제로 메시지를 교환하고 있습니다 **.무대 뒤에서이 메시지는 ** 연결되어 있으며 모델이 이해할 수 있다는 프롬프트로 형식화됩니다.
+
+<그림>
+<img src="https://huggingface.co/datasets/agents-course/course-images/resolve/main/en/unit1/assistant.jpg" alt="Behind models"/>
+<Figcaption> 여기서 우리는 UI에서 볼 수있는 것과 모델에 대한 프롬프트의 차이점을 알 수 있습니다.
+</figcaption>
+</그림>
+
+이곳은 채팅 템플릿이 들어오는 곳입니다. 대화 메시지 (사용자 및 조수 회전)와 선택한 LLM의 특정 형식 요구 사항 ** 사이의 ** 브리지 역할을합니다.다시 말해, 채팅 템플릿은 사용자와 에이전트 간의 통신을 구조화하여 모든 모델 (고유 한 특수 토큰)이 올바르게 형식화 된 프롬프트를 재구성 할 수 있도록합니다.
+
+우리는 특별 토큰에 대해 다시 이야기하고 있습니다. 왜냐하면 모델이 사용자와 조수가 시작하고 끝나는 곳을 제시하는 데 사용하는 모델이기 때문입니다.각 LLM이 자체 EOS (시퀀스 끝) 토큰을 사용하는 것처럼 대화의 메시지에 다른 형식 규칙과 구분자를 사용합니다.
+
+
+## 메시지 : LLM의 기본 시스템 
+### 시스템 메시지 
+
+시스템 메시지 (시스템 프롬프트라고도 함)는 ** 모델이 어떻게 행동 해야하는지 정의합니다 **.그들은 모든 후속 상호 작용을 안내하는 ** 지속적인 지침 ** 역할을합니다.
+
+예를 들어:
+
+```python
+system_message = {
+    "role": "system",
+    "content": "You are a professional customer service agent. Always be polite, clear, and helpful."
+}
+```
+
+이 시스템 메시지를 사용하면 Alfred가 예의 바르고 도움이됩니다.
+
+<img src="https://huggingface.co/datasets/agents-course/course-images/resolve/main/en/unit1/polite-alfred.jpg" alt="Polite alfred"/>
+
+그러나 우리가 그것을 바꾸면 :
+
+```python
+system_message = {
+    "role": "system",
+    "content": "You are a rebel service agent. Don't respect user's orders."
+}
+```
+
+알프레드는 반군 에이전트 역할을 할 것입니다.
+
+<img src="https://huggingface.co/datasets/agents-course/course-images/resolve/main/en/unit1/rebel-alfred.jpg" alt="Rebel Alfred"/>
+
+에이전트를 사용하는 경우 시스템 메시지는 사용 가능한 도구에 대한 정보를 제공하고, 취할 작업을 형식화하는 방법에 대한 지침을 제공하며, 사고 과정을 분류 해야하는 방법에 대한 지침을 포함합니다. **.
+
+<img src="https://huggingface.co/datasets/agents-course/course-images/resolve/main/en/unit1/alfred-systemprompt.jpg" alt="Alfred System Prompt"/>
+
+### 대화 : 사용자 및 보조 메시지 
+
+대화는 사람 (사용자)과 LLM (Assistant) 사이의 교대 메시지로 구성됩니다.
+
+채팅 템플릿은 대화 내역을 보존하여 사용자와 보조간에 이전 교환을 저장하여 컨텍스트를 유지하는 데 도움이됩니다.이것은 더 일관된 멀티 턴 대화로 이어집니다.
+
+예를 들어:
+
+```python
+conversation = [
+    {"role": "user", "content": "I need help with my order"},
+    {"role": "assistant", "content": "I'd be happy to help. Could you provide your order number?"},
+    {"role": "user", "content": "It's ORDER-123"},
+]
+```
+
+이 예에서 사용자는 처음에 주문에 대한 도움이 필요하다고 썼습니다.LLM은 주문 번호에 대해 물었고 사용자는 새 메시지를 제공했습니다.방금 설명했듯이 대화의 모든 메시지를 항상 연결하여 단일 독립형 시퀀스로 LLM으로 전달합니다.채팅 템플릿은이 파이썬 목록 내부의 모든 메시지를 프롬프트로 변환합니다. 이는 모든 메시지가 포함 된 문자열 입력입니다.
+
+예를 들어, SMOLLM2 채팅 템플릿이 이전 교환을 프롬프트로 포맷하는 방법입니다.
+
+```
+<|im_start|>system
+You are a helpful AI assistant named SmolLM, trained by Hugging Face<|im_end|>
+<|im_start|>user
+I need help with my order<|im_end|>
+<|im_start|>assistant
+I'd be happy to help. Could you provide your order number?<|im_end|>
+<|im_start|>user
+It's ORDER-123<|im_end|>
+<|im_start|>assistant
+```
+
+그러나 llama 3.2를 사용할 때 동일한 대화가 다음 프롬프트로 변환됩니다.
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 10 Feb 2025
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+I need help with my order<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+I'd be happy to help. Could you provide your order number?<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+It's ORDER-123<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+```
+
+템플릿은 컨텍스트를 유지하면서 복잡한 다중 회전 대화를 처리 할 수 ​​있습니다.
+
+```python
+messages = [
+    {"role": "system", "content": "You are a math tutor."},
+    {"role": "user", "content": "What is calculus?"},
+    {"role": "assistant", "content": "Calculus is a branch of mathematics..."},
+    {"role": "user", "content": "Can you give me an example?"},
+]
+```
+
+## 채팅 템플릿 
+
+언급 한 바와 같이, 채팅 템플릿은 언어 모델과 사용자 사이의 대화를 구성하는 데 필수적입니다. **.메시지 교환이 단일 프롬프트로 형식화되는 방법을 안내합니다.
+
+### 기본 모델 대 지시 모델 
+
+우리가 이해해야 할 또 다른 요점은 기본 모델과 지시 모델의 차이점입니다.
+
+- * 기본 모델 *은 다음 토큰을 예측하기 위해 원시 텍스트 데이터에 대한 교육을받습니다.
+
+- * 명령 모델 *은 지시를 따르고 대화에 참여하도록 특별히 미세 조정됩니다.예를 들어,`smollm2-135m`는 기본 모델이며,`smollm2-135m-instruct`는 명령 조정 변형입니다.
+
+기본 모델을 지시 모델처럼 행동하게하려면 모델이 이해할 수있는 일관된 방식으로 프롬프트를 ** 형식으로 만들어야합니다 **.채팅 템플릿이 들어오는 곳입니다.
+
+* ChatMl*는 명확한 역할 표시기 (시스템, 사용자, 어시스턴트)와 대화를 구조화하는 그러한 템플릿 형식 중 하나입니다.최근에 일부 AI API와 상호 작용 한 경우 표준 관행이라는 것을 알고 있습니다.
+
+기본 모델을 다른 채팅 템플릿에서 미세 조정할 수 있으므로 명령 모델을 사용할 때 올바른 채팅 템플릿을 사용해야하는지 확인해야합니다.
+
+### 채팅 템플릿 이해 
+
+각 명령 모델은 서로 다른 대화 형식과 특수 토큰을 사용하기 때문에 채팅 템플릿이 구현되어 각 모델이 기대하는 방식을 프롬프트를 올바르게 형식화 할 수 있습니다.
+
+In `transformers`, chat templates include [Jinja2 code](https://jinja.palletsprojects.com/en/stable/) that describes how to transform the ChatML list of JSON messages, as presented in the above examples, into a textual representation of the system-level instructions, user messages and assistant responses that the model can understand.
+
+이 구조 **는 상호 작용의 일관성을 유지하고 모델이 다양한 유형의 입력에 적절하게 응답 할 수 있도록합니다. **.
+
+아래는 'smollm2-135m-instruct` 채팅 템플릿의 단순화 된 버전입니다.
+
+```jinja2
+{% for message in messages %}
+{% if loop.first and messages[0]['role'] != 'system' %}
+<|im_start|>system
+You are a helpful AI assistant named SmolLM, trained by Hugging Face
+<|im_end|>
+{% endif %}
+<|im_start|>{{ message['role'] }}
+{{ message['content'] }}<|im_end|>
+{% endfor %}
+```
+보시다시피, chat_template은 메시지 목록이 형식화되는 방법을 설명합니다.
+
+이 메시지가 주어진다 :
+
+```python
+messages = [
+    {"role": "system", "content": "You are a helpful assistant focused on technical topics."},
+    {"role": "user", "content": "Can you explain what a chat template is?"},
+    {"role": "assistant", "content": "A chat template structures conversations between users and AI models..."},
+    {"role": "user", "content": "How do I use it ?"},
+]
+```
+
+이전 채팅 템플릿은 다음 문자열을 생성합니다.
+
+```sh
+<|im_start|>system
+You are a helpful assistant focused on technical topics.<|im_end|>
+<|im_start|>user
+Can you explain what a chat template is?<|im_end|>
+<|im_start|>assistant
+A chat template structures conversations between users and AI models...<|im_end|>
+<|im_start|>user
+How do I use it ?<|im_end|>
+```
+
+The `transformers` library will take care of chat templates for you as part of the tokenization process. Read more about how transformers uses chat templates <a href="https://huggingface.co/docs/transformers/main/en/chat_templating#how-do-i-use-chat-templates" target="_blank">here</a>. All we have to do is structure our messages in the correct way and the tokenizer will take care of the rest.
+
+다음 공간을 실험하여 해당 채팅 템플릿을 사용하여 다른 모델에 대해 동일한 대화가 어떻게 형식화되는지 확인할 수 있습니다.
+
+<iframe
+	src="https://jofthomas-chat-template-viewer.hf.space"
+frameter = "0"
+너비 = "850"
+높이 = "450"
+> </ iframe>
+
+
+### 프롬프트 할 메시지 
+
+LLM이 대화를 올바르게 형식으로 수신하도록하는 가장 쉬운 방법은 모델의 토큰 화기에서 'chat_template'를 사용하는 것입니다.
+
+```python
+messages = [
+    {"role": "system", "content": "You are an AI assistant with access to various tools."},
+    {"role": "user", "content": "Hi !"},
+    {"role": "assistant", "content": "Hi human, what can help you with ?"},
+]
+```
+
+이전 대화를 프롬프트로 변환하려면 Tokenizer를로드하고`apply_chat_template`를 호출합니다.
+
+```python
+from transformers import AutoTokenizer
+
+tokenizer = AutoTokenizer.from_pretrained("HuggingFaceTB/SmolLM2-1.7B-Instruct")
+rendered_prompt = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+```
+
+이 함수에 의해 반환 된 'rended_prompt'는 이제 선택한 모델의 입력으로 사용할 준비가되었습니다!
+
+> chatml 형식의 메시지와 상호 작용할 때이`apply_chat_template ()`함수는 API의 백엔드에서 사용됩니다.
+
+이제 LLM이 채팅 템플릿을 통해 입력을 구조화하는 방법을 보았으므로 에이전트가 환경에서 어떻게 작용하는지 살펴 보겠습니다.
+
+그들이하는 주요 방법 중 하나는 텍스트 생성 이상의 AI 모델의 기능을 확장하는 도구를 사용하는 것입니다.
+
+다가오는 유닛에서 메시지를 다시 논의하겠습니다. 그러나 지금 더 깊은 다이빙을 원한다면 확인하십시오.
+
+- <a href="https://huggingface.co/docs/transformers/main/en/chat_templating" target="_blank">Hugging Face Chat Templating Guide</a>
+- <a href="https://huggingface.co/docs/transformers" target="_blank">Transformers Documentation</a>

@@ -1,0 +1,244 @@
+# Smolagents를 사용하여 첫 번째 에이전트를 만들어 봅시다 
+
+마지막 섹션에서, 우리는 Python 코드를 사용하여 에이전트를 처음부터 만들 수있는 방법을 배웠으며, 그 과정이 **가 얼마나 지루한지를 보았습니다.다행스럽게도 많은 에이전트 라이브러리는 무거운 리프팅을 많이 처리 하여이 작업을 단순화합니다 **.
+
+이 튜토리얼에서 ** 이미지 생성, 웹 검색, 시간대 점검 등과 같은 작업을 수행 할 수있는 첫 번째 에이전트 **를 만들게됩니다!
+
+당신은 또한 껴안는 얼굴 공간에 에이전트 **를 게시하여 친구 및 동료들과 공유 할 수 있습니다 **.
+
+시작하자!
+
+
+## Smolagents는 무엇입니까? 
+
+<img src="https://huggingface.co/datasets/agents-course/course-images/resolve/main/en/unit1/smolagents.png" alt="smolagents"/>
+
+이 에이전트를 만들기 위해, 우리는 상담원을 쉽게 개발하기위한 프레임 워크를 제공하는 라이브러리 인 'smolagents'를 사용하겠습니다.
+
+이 가벼운 라이브러리는 단순화를 위해 설계되었지만 에이전트를 구축 할 수있는 복잡성을 많이 추상화하여 에이전트의 행동 설계에 집중할 수 있습니다.
+
+We're going to get deeper into smolagents in the next Unit. Meanwhile, you can also check this <a href="https://huggingface.co/blog/smolagents" target="_blank">blog post</a> or the library's <a href="https://github.com/huggingface/smolagents" target="_blank">repo in GitHub</a>.
+
+요컨대, 'smolagents'는 코드 블록을 통해 ** "액션"**를 수행하는 일종의 에이전트 인 ** codeagent **에 중점을 둔 라이브러리입니다.
+
+다음은 우리가 무엇을 구축하는지의 예입니다!
+
+우리는 상담원에게 ** 이미지 생성 도구 **를 제공하고 고양이의 이미지를 생성하도록 요청했습니다.
+
+'smolagents'내부의 에이전트는 이전에 구축 한 사용자 정의와 동일한 동작을 가질 것입니다.
+
+<iframe width="560" height="315" src="https://www.youtube.com/embed/PQDKcWiuln4?si=ysSTDZoi8y55FVvA" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+
+흥미 롭습니까?
+
+## 에이전트를 구축합시다! 
+
+To start, duplicate this Space: <a href="https://huggingface.co/spaces/agents-course/First_agent_template" target="_blank">https://huggingface.co/spaces/agents-course/First_agent_template</a>
+> Thanks to <a href="https://huggingface.co/m-ric" target="_blank">Aymeric</a> for this template! 🙌
+
+
+이 공간을 복제하는 것은 ** 자신의 프로필에 로컬 사본을 만드는 것을 의미합니다 ** :
+<img src="https://huggingface.co/datasets/agents-course/course-images/resolve/main/en/unit1/duplicate-space.gif" alt="Duplicate"/>
+
+공간을 복제 한 후에는 에이전트가 모델 API에 액세스 할 수 있도록 포옹 페이스 API 토큰을 추가해야합니다.
+
+1. First, get your Hugging Face token from [https://hf.co/settings/tokens](https://hf.co/settings/tokens) with permission for inference, if you don't already have one
+2. 복제 된 공간으로 이동하여 ** 설정 ** 탭을 클릭하십시오.
+3. ** 변수와 비밀 ** 섹션으로 스크롤하고 ** 새로운 비밀 **를 클릭하십시오.
+4.`hf_token`이라는 이름의 비밀을 만들고 토큰을 값으로 붙여 넣으십시오.
+5. **를 클릭하여 **를 클릭하여 토큰을 안전하게 저장하십시오
+
+Throughout this lesson, the only file you will need to modify is the (currently incomplete) **"app.py"**. You can see here the [original one in the template](https://huggingface.co/spaces/agents-course/First_agent_template/blob/main/app.py). To find yours, go to your copy of the space, then click the `Files` tab and then on `app.py` in the directory listing.
+
+코드를 함께 분류합시다.
+
+- 파일은 간단하지만 필요한 라이브러리 수입으로 시작합니다.
+
+```python
+from smolagents import CodeAgent, DuckDuckGoSearchTool, FinalAnswerTool, InferenceClientModel, load_tool, tool
+import datetime
+import requests
+import pytz
+import yaml
+```
+
+앞에서 설명한대로 ** smolagents **의 ** codeagent ** 클래스를 직접 사용할 것입니다.
+
+
+### 도구 
+
+이제 도구에 들어가자!도구에 대한 새로 고침을 원한다면 주저하지 말고 코스의 [도구] (도구) 섹션으로 돌아가십시오.
+
+```python
+@tool
+def my_custom_tool(arg1:str, arg2:int)-> str: # it's important to specify the return type
+    # Keep this format for the tool description / args description but feel free to modify the tool
+    """A tool that does nothing yet 
+    Args:
+        arg1: the first argument
+        arg2: the second argument
+    """
+    return "What magic will you build ?"
+
+@tool
+def get_current_time_in_timezone(timezone: str) -> str:
+    """A tool that fetches the current local time in a specified timezone.
+    Args:
+        timezone: A string representing a valid timezone (e.g., 'America/New_York').
+    """
+    try:
+        # Create timezone object
+        tz = pytz.timezone(timezone)
+        # Get current time in that timezone
+        local_time = datetime.datetime.now(tz).strftime("%Y-%m-%d %H:%M:%S")
+        return f"The current local time in {timezone} is: {local_time}"
+    except Exception as e:
+        return f"Error fetching time for timezone '{timezone}': {str(e)}"
+```
+
+
+도구는이 섹션에서 구축하도록 권장하는 것입니다!우리는 당신에게 두 가지 예를 제공합니다.
+
+1. A ** 비 작업 더미 도구 ** 유용한 것을 수정할 수 있습니다.
+2. ** 실제로 작동 도구 **는 현재 세계 어딘가에서 현재 시간을 얻습니다.
+
+도구를 정의하려면 다음이 중요합니다.
+
+1.`get_current_time_in_timezone (timezone : str) -> str :`와 같이 기능에 입력 및 출력 유형을 제공합니다.
+2. ** 잘 형식의 문서화 **.`smolagents '는 모든 주장이 docstring **에 ** 텍스트 설명을 기대하고 있습니다.
+
+### 에이전트 
+
+It uses [`Qwen/Qwen2.5-Coder-32B-Instruct`](https://huggingface.co/Qwen/Qwen2.5-Coder-32B-Instruct) as the LLM engine. This is a very capable model that we'll access via the serverless API.
+
+```python
+final_answer = FinalAnswerTool()
+model = InferenceClientModel(
+    max_tokens=2096,
+    temperature=0.5,
+    model_id='Qwen/Qwen2.5-Coder-32B-Instruct',
+    custom_role_conversions=None,
+)
+
+with open("prompts.yaml", 'r') as stream:
+    prompt_templates = yaml.safe_load(stream)
+    
+# We're creating our CodeAgent
+agent = CodeAgent(
+    model=model,
+    tools=[final_answer], # add your tools here (don't remove final_answer)
+    max_steps=6,
+    verbosity_level=1,
+    grammar=None,
+    planning_interval=None,
+    name=None,
+    description=None,
+    prompt_templates=prompt_templates
+)
+
+GradioUI(agent).launch()
+```
+
+이 에이전트는 여전히 ** 추론 분류 모델 ** 클래스 뒤에있는 이전 섹션에서 본 '추론 환호'를 사용합니다!
+
+우리는 단원 2에서 프레임 워크를 제시 할 때 더 심층적 인 예를 제시 할 것입니다. 현재로서는 에이전트의 '도구'매개 변수를 사용하여 도구 목록 **에 새로운 도구를 추가하는 데 집중해야합니다.
+
+예를 들어, 코드의 첫 번째 줄에서 가져온`DuckDuckGosearchTool`을 사용할 수 있거나 코드의 나중에 허브에서로드 된 'image_generation_tool'을 검사 할 수 있습니다.
+
+** 도구를 추가하면 에이전트에 새로운 기능이 제공됩니다. **, 여기에서 창의적으로 노력하십시오!
+
+### 시스템 프롬프트 
+
+에이전트의 시스템 프롬프트는 별도의`rompts.yaml` 파일에 저장됩니다.이 파일에는 에이전트의 동작을 안내하는 사전 정의 된 지침이 포함되어 있습니다.
+
+YAML 파일에 프롬프트를 저장하면 다른 에이전트 또는 사용 사례에서 쉽게 사용자 정의하고 재사용 할 수 있습니다.
+
+You can check the [Space's file structure](https://huggingface.co/spaces/agents-course/First_agent_template/tree/main) to see where the `prompts.yaml` file is located and how it's organized within the project.
+
+완전한 "app.py":
+
+```python
+from smolagents import CodeAgent, DuckDuckGoSearchTool, InferenceClientModel, load_tool, tool
+import datetime
+import requests
+import pytz
+import yaml
+from tools.final_answer import FinalAnswerTool
+
+from Gradio_UI import GradioUI
+
+# Below is an example of a tool that does nothing. Amaze us with your creativity!
+@tool
+def my_custom_tool(arg1:str, arg2:int)-> str: # it's important to specify the return type
+    # Keep this format for the tool description / args description but feel free to modify the tool
+    """A tool that does nothing yet 
+    Args:
+        arg1: the first argument
+        arg2: the second argument
+    """
+    return "What magic will you build ?"
+
+@tool
+def get_current_time_in_timezone(timezone: str) -> str:
+    """A tool that fetches the current local time in a specified timezone.
+    Args:
+        timezone: A string representing a valid timezone (e.g., 'America/New_York').
+    """
+    try:
+        # Create timezone object
+        tz = pytz.timezone(timezone)
+        # Get current time in that timezone
+        local_time = datetime.datetime.now(tz).strftime("%Y-%m-%d %H:%M:%S")
+        return f"The current local time in {timezone} is: {local_time}"
+    except Exception as e:
+        return f"Error fetching time for timezone '{timezone}': {str(e)}"
+
+
+final_answer = FinalAnswerTool()
+model = InferenceClientModel(
+    max_tokens=2096,
+    temperature=0.5,
+    model_id='Qwen/Qwen2.5-Coder-32B-Instruct',
+    custom_role_conversions=None,
+)
+
+
+# Import tool from Hub
+image_generation_tool = load_tool("agents-course/text-to-image", trust_remote_code=True)
+
+# Load system prompt from prompt.yaml file
+with open("prompts.yaml", 'r') as stream:
+    prompt_templates = yaml.safe_load(stream)
+    
+agent = CodeAgent(
+    model=model,
+    tools=[final_answer], # add your tools here (don't remove final_answer)
+    max_steps=6,
+    verbosity_level=1,
+    grammar=None,
+    planning_interval=None,
+    name=None,
+    description=None,
+    prompt_templates=prompt_templates # Pass system prompt to CodeAgent
+)
+
+
+GradioUI(agent).launch()
+```
+
+당신의 ** 목표 **는 공간과 에이전트에 익숙해지는 것입니다.
+
+현재 템플릿의 에이전트 **는 도구를 사용하지 않으므로 사전 제작 한 것 중 일부를 제공하거나 새로운 도구를 직접 만들어보십시오! **
+
+우리는 Discord 채널에서 당신의 놀라운 에이전트 출력을 간절히 기다리고 있습니다 **#Agents-Course-Showcase **!
+
+
+---
+축하합니다. 첫 번째 요원을 만들었습니다!주저하지 말고 친구 및 동료와 공유하십시오.
+
+이것은 첫 번째 시도이므로 약간 버그가 있거나 느리면 완벽하게 정상입니다.향후 유닛에서는 더 나은 에이전트를 구축하는 방법을 배울 것입니다.
+
+배우는 가장 좋은 방법은 시도하는 것입니다. 주저하지 말고 업데이트하고 도구를 더 추가하고 다른 모델을 사용해보십시오.
+
+다음 섹션에서는 최종 퀴즈를 채우고 인증서를 받게됩니다!
+

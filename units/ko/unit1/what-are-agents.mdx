@@ -1,0 +1,161 @@
+# 에이전트는 무엇입니까? 
+
+<img src="https://huggingface.co/datasets/agents-course/course-images/resolve/main/en/unit1/whiteboard-no-check.jpg" alt="Unit 1 planning"/>
+
+이 섹션이 끝날 무렵, AI의 에이전트 개념과 다양한 응용 프로그램에 익숙해 질 것입니다.
+
+에이전트가 무엇인지 설명하려면 비유부터 시작하겠습니다.
+
+## 큰 그림 : Alfred 요원 
+
+알프레드를 만나십시오.알프레드는 ** 에이전트 **입니다.
+
+<img src="https://huggingface.co/datasets/agents-course/course-images/resolve/main/en/unit1/this-is-alfred.jpg" alt="This is Alfred"/>
+
+Alfred **가 "Alfred, 커피를 원합니다."와 같은 명령 **을 상상해보십시오.
+
+<img src="https://huggingface.co/datasets/agents-course/course-images/resolve/main/en/unit1/coffee-please.jpg" alt="I would like a coffee"/>
+
+Alfred **는 자연 언어 **를 이해하기 때문에 우리의 요청을 빠르게 이해합니다.
+
+Alfred는 명령을 이행하기 전에 ** 추론 및 계획 **에 참여하여 필요한 단계와 도구를 알아냅니다.
+
+1. 부엌으로 가십시오
+2. 커피 머신을 사용하십시오
+3. 커피를 양조하십시오
+4. 커피를 다시 가져 오십시오
+
+<img src="https://huggingface.co/datasets/agents-course/course-images/resolve/main/en/unit1/reason-and-plan.jpg" alt="Reason and plan"/>
+
+일단 계획이 있으면 ** 행동 ** 행동해야합니다.그의 계획을 실행하기 위해 ** 그는 **에 대해 알고있는 도구 목록에서 도구를 사용할 수 있습니다.
+
+이 경우 커피를 만들기 위해 커피 머신을 사용합니다.그는 커피 머신을 활성화하여 커피를 양조합니다.
+
+<img src="https://huggingface.co/datasets/agents-course/course-images/resolve/main/en/unit1/make-coffee.jpg" alt="Make coffee"/>
+
+마지막으로 Alfred는 갓 양조 된 커피를 우리에게 가져옵니다.
+
+<img src="https://huggingface.co/datasets/agents-course/course-images/resolve/main/en/unit1/bring-coffee.jpg" alt="Bring coffee"/>
+
+그리고 이것이 대리인의 것입니다 : ** 환경과의 추론, 계획 및 상호 작용할 수있는 ** ai 모델 **.
+
+우리는 _agency_가 있기 때문에 에이전트라고 부릅니다. 일명 환경과 상호 작용할 수 있습니다.
+
+<img src="https://huggingface.co/datasets/agents-course/course-images/resolve/main/en/unit1/process.jpg" alt="Agent process"/>
+
+## 더 형식적으로 가자 
+
+이제 큰 그림이 있으므로 여기에 더 정확한 정의가 있습니다.
+
+> 에이전트는 사용자 정의 목표를 달성하기 위해 AI 모델을 활용하여 환경과 상호 작용하는 시스템입니다.이는 추론, 계획 및 작업 실행 (종종 외부 도구를 통해)을 결합하여 작업을 수행합니다.
+
+에이전트는 두 가지 주요 부분이있는 것으로 생각하십시오.
+
+1. ** 뇌 (AI 모델) **
+
+이것은 모든 생각이 일어나는 곳입니다.AI 모델 **는 추론 및 계획 **을 처리합니다.
+상황에 따라 어떤 조치를 취할 것인지 **를 결정합니다. **.
+
+2. ** 신체 (기능 및 도구) **
+
+이 부분은 대리인이 할 수있는 모든 것을 ** **를 나타냅니다.
+
+가능한 조치의 ** 범위는 ** 에이전트 **가 **를 장착 한 것에 달려 있습니다.예를 들어, 인간은 날개가 없기 때문에 "Fly"** 액션 **를 수행 할 수는 없지만 "Walk", "Run", "Jump", "Grab"등과 같은 ** 액션 **를 실행할 수 있습니다.
+
+### "대행사"의 스펙트럼 
+
+이 정의에 따라, 에이전트는 지속적으로 증가하는 대행사에 존재합니다.
+
+|대행사 수준 |설명 ||예제 패턴 |
+|--- |--- |--- |--- |
+|☆☆☆ |에이전트 출력은 프로그램 흐름에 영향을 미치지 않습니다 |간단한 프로세서 |`process_llm_output (llm_response)`|
+|★ ☆☆ |에이전트 출력은 기본 제어 흐름을 결정합니다 |라우터 |`if llm_decision () : path_a () else : path_b ()`|
+|★★. |에이전트 출력은 함수 실행을 결정합니다 |도구 발신자 |`run_function (llm_chosen_tool, llm_chosen_args)`|
+|★★★ |에이전트 출력은 반복 및 프로그램 연속을 제어합니다 |다중 단계 에이전트 |`while llm_should_continue () : execute_next_step ()`|
+|★★★ |하나의 에이전트 워크 플로우는 다른 에이전트 워크 플로를 시작할 수 있습니다 |다중 에이전트 |`if llm_trigger () : execute_agent ()`|
+
+Table from [smolagents conceptual guide](https://huggingface.co/docs/smolagents/conceptual_guides/intro_agents).
+
+
+## 에이전트에 어떤 유형의 AI 모델을 사용합니까? 
+
+에이전트에서 발견되는 가장 일반적인 AI 모델은 LLM (큰 언어 모델)으로, ** 텍스트 **를 입력 및 출력 ** 텍스트 **로 취합니다.
+
+잘 알려진 예는 ** gpt4 **에서 ** gpt4 **입니다.[다음 섹션] (What-are-llms)에서 LLM에 대해 자세히 알아볼 것입니다.
+
+<팁>
+다른 입력을 에이전트의 핵심 모델로 받아들이는 모델을 사용할 수도 있습니다.예를 들어, LLM과 같지만 이미지를 입력으로 이해하는 VLM (Vision Language Model).우리는 지금 LLM에 집중하고 나중에 다른 옵션에 대해 논의 할 것입니다.
+</팁>
+
+## AI는 환경에서 어떻게 행동합니까? 
+
+LLM은 놀라운 모델이지만 ** 텍스트 만 생성 할 수 있습니다 **.
+
+그러나 HuggingChat 또는 Chatgpt와 같은 잘 알려진 채팅 응용 프로그램을 요청하면 이미지를 생성 할 수 있습니다!어떻게 가능합니까?
+
+대답은 HuggingChat, Chatgpt 및 유사한 앱 개발자가 LLM이 이미지를 만들 때 사용할 수있는 추가 기능 (** 도구 **)을 구현했다는 것입니다.
+
+<그림>
+<img src="https://huggingface.co/datasets/agents-course/course-images/resolve/main/en/unit1/eiffel_brocolis.jpg" alt="Eiffel Brocolis"/>
+<figcaption>이 모델은 이미지 생성 도구를 사용 하여이 이미지를 생성했습니다.
+</figcaption>
+</그림>
+
+[도구] (도구) 섹션에서 도구에 대해 자세히 알아볼 것입니다.
+
+## 에이전트는 어떤 유형의 작업을 수행 할 수 있습니까? 
+
+에이전트는 ** 도구 **를 통해 구현하는 모든 작업을 수행하여 ** 작업 **를 완료 할 수 있습니다.
+
+예를 들어, 내 컴퓨터에서 개인 비서 (Siri)와 같은 개인 비서로 행동하기 위해 에이전트를 작성하고 "오늘의 회의를 지연 시키라고 요청하는 관리자에게 이메일을 보내라"고 요청하면 이메일을 보낼 수있는 코드를 줄 수 있습니다.이는 에이전트가 이메일을 보내야 할 때마다 사용할 수있는 새로운 도구입니다.파이썬으로 쓸 수 있습니다.
+
+```python
+def send_message_to(recipient, message):
+    """Useful to send an e-mail message to a recipient"""
+    ...
+```
+
+우리가 볼 수 있듯이 LLM은 필요할 때 도구를 실행하기위한 코드를 생성하여 원하는 작업을 수행합니다.
+
+```python
+send_message_to("Manager", "Can we postpone today's meeting?")
+```
+
+도구의 ** 디자인은 매우 중요하며 에이전트의 품질에 큰 영향을 미칩니다 **.일부 작업에는 매우 구체적인 도구가 제작되어야하며 다른 작업은 "Web_Search"와 같은 범용 도구로 해결 될 수 있습니다.
+
+> ** 동작은 도구 **와 같지 않습니다.예를 들어, 행동에는 여러 도구를 사용하여 완료 할 수 있습니다.
+
+에이전트가 환경과 상호 작용할 수있게하면 회사 및 개인에 대한 실제 사용이 가능합니다 **.
+
+### 예 1 : 개인 가상 비서 
+
+Siri, Alexa 또는 Google Assistant와 같은 가상 어시스턴트는 디지털 환경을 사용하여 사용자를 대신하여 상호 작용할 때 에이전트로 일합니다.
+
+사용자 쿼리를 취하고 컨텍스트를 분석하고 데이터베이스에서 정보를 검색하며 응답을 제공하거나 (알림 설정, 메시지 보내기 또는 스마트 장치 제어)를 제공합니다.
+
+### 예제 2 : 고객 서비스 챗봇 
+
+많은 회사들이 챗봇을 자연어로 고객과 상호 작용하는 대리인으로 배치합니다.
+
+이러한 에이전트는 질문에 대답하거나 문제 해결 단계를 통해 사용자를 안내하거나 내부 데이터베이스의 문제 열기 또는 완전한 트랜잭션을 수행 할 수 있습니다.
+
+사전 정의 된 목표에는 사용자 만족도 개선, 대기 시간 감소 또는 판매 전환율 증가가 포함될 수 있습니다.고객과 직접 상호 작용하고 대화에서 배우고 시간이 지남에 따라 응답을 조정함으로써 행동중인 에이전트의 핵심 원칙을 보여줍니다.
+
+
+### 예 3 : 비디오 게임에서 AI 비 플레이 할 수없는 캐릭터 
+
+LLM에 의해 구동되는 AI 에이전트는 NPC (No-Playable 캐릭터)를보다 역동적이고 예측할 수 없게 만들 수 있습니다.
+
+엄격한 행동 나무를 따르지 않고 맥락 적으로 응답하고 플레이어 상호 작용 **에 적응하고 더 미묘한 대화를 생성 할 수 있습니다.이 유연성은 플레이어의 행동과 함께 진화하는 더 많은 생명과 매력적인 캐릭터를 만드는 데 도움이됩니다.
+
+---
+
+요약하면, 에이전트는 AI 모델 (일반적으로 LLM)을 핵심 추론 엔진으로 사용하는 시스템입니다.
+
+- ** 자연 언어 이해 : ** 의미있는 방식으로 인간 지시를 해석하고 반응합니다.
+
+- ** 이유와 계획 : ** 정보를 분석하고 결정을 내리고 문제를 해결하기위한 전략을 고안합니다.
+
+- ** 환경과 상호 작용하십시오 : ** 정보 수집, 행동을 취하고 그러한 행동의 결과를 관찰하십시오.
+
+에이전트가 무엇인지 확실하게 파악 했으므로 짧고 등급이없는 퀴즈로 이해를 강화해 봅시다.그 후, 우리는“에이전트의 뇌”: [llms] (what-are-llms)로 뛰어들 것입니다.
