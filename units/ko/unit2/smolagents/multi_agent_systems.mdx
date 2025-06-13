@@ -1,0 +1,250 @@
+<CourseFloatingBanner chapter={2}
+  classNames="absolute z-10 right-0 top-0"
+  notebooks={[
+    {label: "Google Colab", value: "https://colab.research.google.com/#fileId=https://huggingface.co/agents-course/notebooks/blob/main/unit2/smolagents/multiagent_notebook.ipynb"},
+]} />
+
+# 다중 에이전트 시스템
+
+다중 에이전트 시스템은 **전문화된 에이전트들이 복잡한 작업을 협업**할 수 있게 하여 모듈성, 확장성, 견고성을 향상시킵니다. 단일 에이전트에 의존하는 대신, 각각의 고유한 능력을 가진 에이전트들 사이에 작업을 분배합니다.
+
+**smolagents**에서는 Python 코드 생성, 외부 도구 호출, 웹 검색 등 다양한 작업을 수행하는 에이전트들을 조합할 수 있습니다. 이러한 에이전트들을 조율함으로써 강력한 워크플로우를 만들 수 있습니다.
+
+일반적인 구성은 다음과 같습니다:
+- 작업 위임을 위한 **매니저 에이전트**
+- 코드 실행을 위한 **코드 인터프리터 에이전트**
+- 정보 검색을 위한 **웹 검색 에이전트**
+
+아래 다이어그램은 **매니저 에이전트**가 **코드 인터프리터 도구**와 **웹 검색 에이전트**를 조율하고, 이들이 차례로 `DuckDuckGoSearchTool`과 `VisitWebpageTool`과 같은 도구들을 사용하여 관련 정보를 수집하는 간단한 다중 에이전트 아키텍처를 보여줍니다.
+
+<img src="https://mermaid.ink/img/pako:eNp1kc1qhTAQRl9FUiQb8wIpdNO76eKubrmFks1oRg3VSYgjpYjv3lFL_2hnMWQOJwn5sqgmelRWleUSKLAtFs09jqhtoWuYUFfFAa6QA9QDTnpzamheuhxn8pt40-6l13UtS0ddhtQXj6dbR4XUGQg6zEYasTF393KjeSDGnDJKNxzj8I_7hLW5IOSmP9CH9hv_NL-d94d4DVNg84p1EnK4qlIj5hGClySWbadT-6OdsrL02MI8sFOOVkciw8zx8kaNspxnrJQE0fXKtjBMMs3JA-MpgOQwftIE9Bzj14w-cMznI_39E9Z3p0uFoA?type=png" style='background: white;'>
+
+## 다중 에이전트 시스템의 작동 방식
+
+다중 에이전트 시스템은 **오케스트레이터 에이전트**의 조율 하에 여러 전문화된 에이전트들이 함께 작동하는 것으로 구성됩니다. 이 접근 방식은 서로 다른 역할을 가진 에이전트들 사이에 작업을 분배함으로써 복잡한 워크플로우를 가능하게 합니다.
+
+예를 들어, **다중 에이전트 RAG 시스템**은 다음과 같은 요소들을 통합할 수 있습니다:
+- 인터넷 검색을 위한 **웹 에이전트**
+- 지식 베이스에서 정보를 가져오는 **검색 에이전트**
+- 시각 자료를 생성하는 **이미지 생성 에이전트**
+
+이 모든 에이전트들은 작업 위임과 상호작용을 관리하는 오케스트레이터의 지휘 하에 작동합니다.
+
+## 다중 에이전트 계층 구조로 복잡한 작업 해결하기
+
+<Tip>
+Google Colab에서 실행할 수 있는 <a href="https://huggingface.co/agents-course/notebooks/blob/main/unit2/smolagents/multiagent_notebook.ipynb" target="_blank">이 노트북</a>의 코드를 따라해볼 수 있습니다.
+</Tip>
+
+리셉션이 다가오고 있습니다! 여러분의 도움으로 Alfred는 이제 준비를 거의 마쳤습니다.
+
+하지만 이제 문제가 발생했습니다: 배트모빌이 사라졌습니다. Alfred는 대체 차량을 찾아야 하며, 빠르게 찾아야 합니다.
+
+다행히도 Bruce Wayne의 삶에 대한 몇 편의 전기 영화가 제작되었기 때문에, Alfred는 영화 촬영장에 남겨진 차량을 찾아 현대적인 기준으로 재설계할 수 있을 것입니다. 물론 완전 자율주행 옵션도 포함되어야 합니다.
+
+하지만 이것은 전 세계의 수많은 촬영 장소 어디에나 있을 수 있습니다.
+
+그래서 Alfred는 여러분의 도움이 필요합니다. 이 작업을 해결할 수 있는 에이전트를 만들 수 있을까요?
+
+> 👉 전 세계의 모든 배트맨 촬영 장소를 찾고, 배를 통한 이동 시간을 계산하여 지도에 표시하되, 배 이동 시간에 따라 색상이 달라지도록 하세요. 또한 동일한 배 이동 시간을 가진 슈퍼카 공장들도 표시하세요.
+
+시작해보겠습니다!
+
+이 예제에는 몇 가지 추가 패키지가 필요하므로 먼저 설치하겠습니다:
+
+```bash
+pip install 'smolagents[litellm]' plotly geopandas shapely kaleido -q
+```
+
+### 먼저 화물기 이동 시간을 계산하는 도구를 만듭니다.
+
+```python
+import math
+from typing import Optional, Tuple
+
+from smolagents import tool
+
+
+@tool
+def calculate_cargo_travel_time(
+    origin_coords: Tuple[float, float],
+    destination_coords: Tuple[float, float],
+    cruising_speed_kmh: Optional[float] = 750.0,  # Average speed for cargo planes
+) -> float:
+    """
+    Calculate the travel time for a cargo plane between two points on Earth using great-circle distance.
+
+    Args:
+        origin_coords: Tuple of (latitude, longitude) for the starting point
+        destination_coords: Tuple of (latitude, longitude) for the destination
+        cruising_speed_kmh: Optional cruising speed in km/h (defaults to 750 km/h for typical cargo planes)
+
+    Returns:
+        float: The estimated travel time in hours
+
+    Example:
+        >>> # Chicago (41.8781° N, 87.6298° W) to Sydney (33.8688° S, 151.2093° E)
+        >>> result = calculate_cargo_travel_time((41.8781, -87.6298), (-33.8688, 151.2093))
+    """
+
+    def to_radians(degrees: float) -> float:
+        return degrees * (math.pi / 180)
+
+    # Extract coordinates
+    lat1, lon1 = map(to_radians, origin_coords)
+    lat2, lon2 = map(to_radians, destination_coords)
+
+    # Earth's radius in kilometers
+    EARTH_RADIUS_KM = 6371.0
+
+    # Calculate great-circle distance using the haversine formula
+    dlon = lon2 - lon1
+    dlat = lat2 - lat1
+
+    a = (
+        math.sin(dlat / 2) ** 2
+        + math.cos(lat1) * math.cos(lat2) * math.sin(dlon / 2) ** 2
+    )
+    c = 2 * math.asin(math.sqrt(a))
+    distance = EARTH_RADIUS_KM * c
+
+    # Add 10% to account for non-direct routes and air traffic controls
+    actual_distance = distance * 1.1
+
+    # Calculate flight time
+    # Add 1 hour for takeoff and landing procedures
+    flight_time = (actual_distance / cruising_speed_kmh) + 1.0
+
+    # Format the results
+    return round(flight_time, 2)
+
+
+print(calculate_cargo_travel_time((41.8781, -87.6298), (-33.8688, 151.2093)))
+```
+
+### 에이전트 설정
+
+모델 제공자로는 Hub의 새로운 [추론 제공자](https://huggingface.co/blog/inference-providers) 중 하나인 Together AI를 사용합니다!
+
+GoogleSearchTool은 [Serper API](https://serper.dev)를 사용하여 웹을 검색하므로, 환경 변수 `SERPER_API_KEY`를 설정하고 `provider="serpapi"`를 전달하거나, `SERPER_API_KEY`를 설정하고 `provider=serper`를 전달해야 합니다.
+
+Serp API 제공자가 설정되어 있지 않다면 `DuckDuckGoSearchTool`을 사용할 수 있지만, 속도 제한이 있다는 점을 주의하세요.
+
+```python
+import os
+from PIL import Image
+from smolagents import CodeAgent, GoogleSearchTool, InferenceClientModel, VisitWebpageTool
+
+model = InferenceClientModel(model_id="Qwen/Qwen2.5-Coder-32B-Instruct", provider="together")
+```
+
+먼저 간단한 보고서를 제공하는 기준선으로 간단한 에이전트를 만들어보겠습니다.
+
+```python
+task = """Find all Batman filming locations in the world, calculate the time to transfer via cargo plane to here (we're in Gotham, 40.7128° N, 74.0060° W), and return them to me as a pandas dataframe.
+Also give me some supercar factories with the same cargo plane transfer time."""
+```
+
+```python
+agent = CodeAgent(
+    model=model,
+    tools=[GoogleSearchTool("serper"), VisitWebpageTool(), calculate_cargo_travel_time],
+    additional_authorized_imports=["pandas"],
+    max_steps=20,
+)
+```
+
+```python
+result = agent.run(task)
+```
+
+```python
+result
+```
+
+이 경우 다음과 같은 출력이 생성됩니다:
+
+```python
+|  | Location                                             | Travel Time to Gotham (hours) |
+|--|------------------------------------------------------|------------------------------|
+| 0  | Necropolis Cemetery, Glasgow, Scotland, UK         | 8.60                         |
+| 1  | St. George's Hall, Liverpool, England, UK         | 8.81                         |
+| 2  | Two Temple Place, London, England, UK             | 9.17                         |
+| 3  | Wollaton Hall, Nottingham, England, UK           | 9.00                         |
+| 4  | Knebworth House, Knebworth, Hertfordshire, UK    | 9.15                         |
+| 5  | Acton Lane Power Station, Acton Lane, Acton, UK  | 9.16                         |
+| 6  | Queensboro Bridge, New York City, USA            | 1.01                         |
+| 7  | Wall Street, New York City, USA                  | 1.00                         |
+| 8  | Mehrangarh Fort, Jodhpur, Rajasthan, India       | 18.34                        |
+| 9  | Turda Gorge, Turda, Romania                      | 11.89                        |
+| 10 | Chicago, USA                                     | 2.68                         |
+| 11 | Hong Kong, China                                 | 19.99                        |
+| 12 | Cardington Studios, Northamptonshire, UK        | 9.10                         |
+| 13 | Warner Bros. Leavesden Studios, Hertfordshire, UK | 9.13                         |
+| 14 | Westwood, Los Angeles, CA, USA                  | 6.79                         |
+| 15 | Woking, UK (McLaren)                             | 9.13                         |
+```
+
+전용 계획 단계를 추가하고 프롬프트를 더 추가하여 이를 개선할 수 있습니다.
+
+계획 단계를 통해 에이전트는 미리 생각하고 다음 단계를 계획할 수 있어 더 복잡한 작업에 유용합니다.
+
+```python
+agent.planning_interval = 4
+
+detailed_report = agent.run(f"""
+You're an expert analyst. You make comprehensive reports after visiting many websites.
+Don't hesitate to search for many queries at once in a for loop.
+For each data point that you find, visit the source url to confirm numbers.
+
+{task}
+""")
+
+print(detailed_report)
+```
+
+```python
+detailed_report
+```
+
+이 경우 다음과 같은 출력이 생성됩니다:
+
+```python
+|  | Location                                         | Travel Time (hours) |
+|--|--------------------------------------------------|---------------------|
+| 0  | Bridge of Sighs, Glasgow Necropolis, Glasgow, UK | 8.6                 |
+| 1  | Wishart Street, Glasgow, Scotland, UK         | 8.6                 |
+```
+
+이러한 빠른 변경 덕분에, 에이전트에 자세한 프롬프트를 제공하고 계획 기능을 부여함으로써 훨씬 더 간결한 보고서를 얻을 수 있었습니다!
+
+모델의 컨텍스트 창이 빠르게 채워지고 있습니다. 따라서 **에이전트에게 자세한 검색 결과를 다른 결과와 결합하도록 요청하면, 속도가 느려지고 토큰과 비용이 빠르게 증가할 것입니다**.
+
+➡️ 시스템의 구조를 개선해야 합니다.
+
+### ✌️ 두 에이전트 사이에 작업 분할하기
+
+다중 에이전트 구조는 서로 다른 하위 작업 사이에 메모리를 분리할 수 있게 하여 두 가지 큰 이점을 제공합니다:
+- 각 에이전트는 핵심 작업에 더 집중하여 성능이 향상됩니다
+- 메모리를 분리하면 각 단계에서 입력 토큰 수가 줄어들어 지연 시간과 비용이 감소합니다
+
+전용 웹 검색 에이전트와 이를 관리하는 다른 에이전트로 구성된 팀을 만들어보겠습니다.
+
+매니저 에이전트는 최종 보고서를 작성하기 위한 플로팅 기능이 필요하므로, 공간 플로팅을 위한 `geopandas`와 `shapely`를 포함한 추가 임포트에 대한 접근 권한을 부여하겠습니다.
+
+```python
+model = InferenceClientModel(
+    "Qwen/Qwen2.5-Coder-32B-Instruct", provider="together", max_tokens=8096
+)
+
+web_agent = CodeAgent(
+    model=model,
+    tools=[
+        GoogleSearchTool(provider="serper"),
+        VisitWebpageTool(),
+        calculate_cargo_travel_time,
+    ],
+    name="web_agent",
+    description="Browses the web to find information",
+    verbosity_level=0,
+) 

@@ -1,0 +1,453 @@
+<CourseFloatingBanner chapter={2}
+  classNames="absolute z-10 right-0 top-0"
+  notebooks={[
+    {label: "Google Colab", value: "https://colab.research.google.com/#fileId=https://huggingface.co/agents-course/notebooks/bonus-unit2/monitoring-and-evaluating-agents.ipynb"},
+]} />
+
+# 보너스 유닛 2: 에이전트의 관찰 가능성과 평가
+
+<Tip>
+<a href="https://huggingface.co/agents-course/notebooks/blob/main/bonus-unit2/monitoring-and-evaluating-agents-notebook.ipynb" target="_blank">이 노트북</a>의 코드를 Google Colab을 사용하여 실행할 수 있습니다.
+</Tip>
+
+이 노트북에서는 오픈소스 관찰 가능성 도구를 사용하여 **AI 에이전트의 내부 단계(추적)를 모니터링**하고 **성능을 평가**하는 방법을 배우게 됩니다.
+
+에이전트의 동작을 관찰하고 평가하는 능력은 다음과 같은 경우에 필수적입니다:
+- 작업이 실패하거나 최적이 아닌 결과를 생성할 때 문제를 디버깅
+- 실시간으로 비용과 성능을 모니터링
+- 지속적인 피드백을 통해 신뢰성과 안전성 개선
+
+## 연습 사전 요구사항 🏗️
+
+이 노트북을 실행하기 전에 다음을 확인해주세요:
+
+🔲 📚  [에이전트 소개](https://huggingface.co/learn/agents-course/unit1/introduction)를 **학습**했습니다.
+
+🔲 📚  [smolagents 프레임워크](https://huggingface.co/learn/agents-course/unit2/smolagents/introduction)를 **학습**했습니다.
+
+## 0단계: 필요한 라이브러리 설치
+
+에이전트를 실행하고, 모니터링하고, 평가하는 데 필요한 몇 가지 라이브러리를 설치합니다:
+
+
+```python
+%pip install 'smolagents[telemetry]'
+%pip install opentelemetry-sdk opentelemetry-exporter-otlp openinference-instrumentation-smolagents
+%pip install langfuse datasets 'smolagents[gradio]'
+```
+
+## 1단계: 에이전트 계측하기
+
+이 노트북에서는 [Langfuse](https://langfuse.com/)를 관찰 가능성 도구로 사용하지만, **다른 OpenTelemetry 호환 서비스**를 사용할 수도 있습니다. 아래 코드는 Langfuse(또는 다른 OTel 엔드포인트)를 위한 환경 변수를 설정하고 smolagent를 계측하는 방법을 보여줍니다.
+
+**참고:** LlamaIndex나 LangGraph를 사용하는 경우, 계측 방법에 대한 문서는 [여기](https://langfuse.com/docs/integrations/llama-index/workflows)와 [여기](https://langfuse.com/docs/integrations/langchain/example-python-langgraph)에서 찾을 수 있습니다.
+
+먼저, Langfuse OpenTelemetry 엔드포인트에 대한 연결을 설정하기 위한 올바른 환경 변수를 구성해보겠습니다.
+
+```python
+import os
+import base64
+
+# https://cloud.langfuse.com에서 자신의 키를 가져오세요
+LANGFUSE_PUBLIC_KEY = "pk-lf-..." 
+LANGFUSE_SECRET_KEY = "sk-lf-..." 
+os.environ["LANGFUSE_PUBLIC_KEY"] = LANGFUSE_PUBLIC_KEY
+os.environ["LANGFUSE_SECRET_KEY"] = LANGFUSE_SECRET_KEY
+os.environ["LANGFUSE_HOST"] = "https://cloud.langfuse.com"  # 🇪🇺 EU 리전 예시
+# os.environ["LANGFUSE_HOST"] = "https://us.cloud.langfuse.com"  # 🇺🇸 US 리전 예시
+
+LANGFUSE_AUTH = base64.b64encode(
+    f"{LANGFUSE_PUBLIC_KEY}:{LANGFUSE_SECRET_KEY}".encode()
+).decode()
+
+os.environ["OTEL_EXPORTER_OTLP_ENDPOINT"] = os.environ.get("LANGFUSE_HOST") + "/api/public/otel"
+os.environ["OTEL_EXPORTER_OTLP_HEADERS"] = f"Authorization=Basic {LANGFUSE_AUTH}"
+```
+추론 호출을 위해 Hugging Face 토큰도 구성해야 합니다.
+
+```python
+# Hugging Face 및 기타 토큰/시크릿을 환경 변수로 설정
+os.environ["HF_TOKEN"] = "hf_..." 
+```
+다음으로, 구성된 OpenTelemetry를 위한 트레이서 프로바이더를 설정할 수 있습니다.
+
+```python
+from opentelemetry.sdk.trace import TracerProvider
+from openinference.instrumentation.smolagents import SmolagentsInstrumentor
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+from opentelemetry.sdk.trace.export import SimpleSpanProcessor
+ 
+# OpenTelemetry를 위한 TracerProvider 생성
+trace_provider = TracerProvider()
+
+# 추적을 전송하기 위해 OTLPSpanExporter가 있는 SimpleSpanProcessor 추가
+trace_provider.add_span_processor(SimpleSpanProcessor(OTLPSpanExporter()))
+
+# 전역 기본 트레이서 프로바이더 설정
+from opentelemetry import trace
+trace.set_tracer_provider(trace_provider)
+tracer = trace.get_tracer(__name__)
+
+# 구성된 프로바이더로 smolagents 계측
+SmolagentsInstrumentor().instrument(tracer_provider=trace_provider)
+```
+
+## 2단계: 계측 테스트하기
+
+여기 `1+1`을 계산하는 smolagents의 간단한 CodeAgent가 있습니다. 계측이 올바르게 작동하는지 확인하기 위해 실행합니다. 모든 것이 올바르게 설정되었다면, 관찰 가능성 대시보드에서 로그/스팬을 볼 수 있을 것입니다.
+
+
+```python
+from smolagents import InferenceClientModel, CodeAgent
+
+# 계측을 테스트하기 위한 간단한 에이전트 생성
+agent = CodeAgent(
+    tools=[],
+    model=InferenceClientModel()
+)
+
+agent.run("1+1=")
+```
+
+[Langfuse 추적 대시보드](https://cloud.langfuse.com)(또는 선택한 관찰 가능성 도구)를 확인하여 스팬과 로그가 기록되었는지 확인하세요.
+
+Langfuse의 예시 스크린샷:
+
+![Langfuse의 예시 추적](https://huggingface.co/datasets/agents-course/course-images/resolve/main/en/bonus-unit2/first-example-trace.png)
+
+_[추적 링크](https://cloud.langfuse.com/project/cloramnkj0002jz088vzn1ja4/traces/1b94d6888258e0998329cdb72a371155?timestamp=2025-03-10T11%3A59%3A41.743Z)_
+
+## 3단계: 더 복잡한 에이전트 관찰 및 평가하기
+
+계측이 작동하는 것을 확인했으니, 고급 메트릭(토큰 사용량, 지연 시간, 비용 등)이 어떻게 추적되는지 볼 수 있도록 더 복잡한 쿼리를 시도해보겠습니다.
+
+
+```python
+from smolagents import (CodeAgent, DuckDuckGoSearchTool, InferenceClientModel)
+
+search_tool = DuckDuckGoSearchTool()
+agent = CodeAgent(tools=[search_tool], model=InferenceClientModel())
+
+agent.run("노트르담 대성당 안에 몇 개의 루빅스 큐브를 넣을 수 있을까요?")
+```
+
+### 추적 구조
+
+대부분의 관찰 가능성 도구는 에이전트의 논리의 각 단계를 나타내는 **스팬**을 포함하는 **추적**을 기록합니다. 여기서 추적은 전체 에이전트 실행과 다음에 대한 하위 스팬을 포함합니다:
+- 도구 호출(DuckDuckGoSearchTool)
+- LLM 호출(InferenceClientModel)
+
+이를 검사하여 정확히 어디에 시간이 소요되는지, 얼마나 많은 토큰이 사용되는지 등을 볼 수 있습니다:
+
+![Langfuse의 추적 트리](https://huggingface.co/datasets/agents-course/course-images/resolve/main/en/bonus-unit2/trace-tree.png)
+
+_[추적 링크](https://cloud.langfuse.com/project/cloramnkj0002jz088vzn1ja4/traces/1ac33b89ffd5e75d4265b62900c348ed?timestamp=2025-03-07T13%3A45%3A09.149Z&display=preview)_
+
+## 온라인 평가
+
+이전 섹션에서 온라인과 오프라인 평가의 차이점에 대해 배웠습니다. 이제 프로덕션에서 에이전트를 모니터링하고 실시간으로 평가하는 방법을 살펴보겠습니다.
+
+### 프로덕션에서 추적해야 할 일반적인 메트릭
+
+1. **비용** — smolagents 계측은 토큰 사용량을 캡처하며, 토큰당 가격을 할당하여 대략적인 비용으로 변환할 수 있습니다.
+2. **지연 시간** — 각 단계 또는 전체 실행을 완료하는 데 걸리는 시간을 관찰합니다.
+3. **사용자 피드백** — 사용자는 에이전트를 개선하거나 수정하는 데 도움이 되는 직접적인 피드백(좋아요/싫어요)을 제공할 수 있습니다.
+4. **LLM-as-a-Judge** — 별도의 LLM을 사용하여 에이전트의 출력을 거의 실시간으로 평가합니다(예: 독성이나 정확성 확인).
+
+아래에서 이러한 메트릭의 예시를 보여드리겠습니다.
+
+#### 1. 비용
+
+아래는 `Qwen2.5-Coder-32B-Instruct` 호출에 대한 사용량을 보여주는 스크린샷입니다. 이는 비용이 많이 드는 단계를 파악하고 에이전트를 최적화하는 데 유용합니다.
+
+![비용](https://huggingface.co/datasets/agents-course/course-images/resolve/main/en/bonus-unit2/smolagents-costs.png)
+
+_[추적 링크](https://cloud.langfuse.com/project/cloramnkj0002jz088vzn1ja4/traces/1ac33b89ffd5e75d4265b62900c348ed?timestamp=2025-03-07T13%3A45%3A09.149Z&display=preview)_
+
+#### 2. 지연 시간
+
+각 단계를 완료하는 데 걸린 시간도 볼 수 있습니다. 아래 예시에서 전체 대화는 32초가 걸렸으며, 이를 단계별로 분해할 수 있습니다. 이는 병목 현상을 식별하고 에이전트를 최적화하는 데 도움이 됩니다.
+
+![지연 시간](https://huggingface.co/datasets/agents-course/course-images/resolve/main/en/bonus-unit2/smolagents-latency.png)
+
+_[추적 링크](https://cloud.langfuse.com/project/cloramnkj0002jz088vzn1ja4/traces/1ac33b89ffd5e75d4265b62900c348ed?timestamp=2025-03-07T13%3A45%3A09.149Z&display=preview)_
+
+#### 3. 추가 속성
+
+사용자 ID, 세션 ID 또는 태그와 같은 추가 속성을 스팬에 설정하여 전달할 수도 있습니다. 예를 들어, smolagents 계측은 OpenTelemetry를 사용하여 `langfuse.user.id` 또는 커스텀 태그와 같은 속성을 첨부합니다.
+
+
+```python
+from smolagents import (CodeAgent, DuckDuckGoSearchTool, InferenceClientModel)
+from opentelemetry import trace
+
+search_tool = DuckDuckGoSearchTool()
+agent = CodeAgent(
+    tools=[search_tool],
+    model=InferenceClientModel()
+)
+
+with tracer.start_as_current_span("Smolagent-Trace") as span:
+    span.set_attribute("langfuse.user.id", "smolagent-user-123")
+    span.set_attribute("langfuse.session.id", "smolagent-session-123456789")
+    span.set_attribute("langfuse.tags", ["city-question", "testing-agents"])
+
+    agent.run("독일의 수도는 무엇인가요?")
+```
+
+![추가 메트릭으로 에이전트 실행 향상](https://huggingface.co/datasets/agents-course/course-images/resolve/main/en/bonus-unit2/smolagents-attributes.png)
+
+#### 4. 사용자 피드백
+
+에이전트가 사용자 인터페이스에 내장되어 있다면, 직접적인 사용자 피드백(채팅 UI의 좋아요/싫어요와 같은)을 기록할 수 있습니다. 아래는 [Gradio](https://gradio.app/)를 사용하여 간단한 피드백 메커니즘이 있는 채팅을 내장하는 예시입니다.
+
+아래 코드 스니펫에서 사용자가 채팅 메시지를 보낼 때 OpenTelemetry 추적 ID를 캡처합니다. 사용자가 마지막 답변을 좋아하거나 싫어하면 추적에 점수를 첨부합니다.
+
+
+```python
+import gradio as gr
+from opentelemetry.trace import format_trace_id
+from smolagents import (CodeAgent, InferenceClientModel)
+from langfuse import Langfuse
+
+langfuse = Langfuse()
+model = InferenceClientModel()
+agent = CodeAgent(tools=[], model=model, add_base_tools=True)
+
+formatted_trace_id = None  # 데모를 위해 현재 trace_id를 전역적으로 저장
+
+def respond(prompt, history):
+    with trace.get_tracer(__name__).start_as_current_span("Smolagent-Trace") as span:
+        output = agent.run(prompt)
+
+        current_span = trace.get_current_span()
+        span_context = current_span.get_span_context()
+        trace_id = span_context.trace_id
+        global formatted_trace_id
+        formatted_trace_id = str(format_trace_id(trace_id))
+        langfuse.trace(id=formatted_trace_id, input=prompt, output=output)
+
+    history.append({"role": "assistant", "content": str(output)})
+    return history
+
+def handle_like(data: gr.LikeData):
+    # 데모를 위해 사용자 피드백을 1(좋아요) 또는 0(싫어요)으로 매핑
+    if data.liked:
+        langfuse.score(
+            value=1,
+            name="user-feedback",
+            trace_id=formatted_trace_id
+        )
+    else:
+        langfuse.score(
+            value=0,
+            name="user-feedback",
+            trace_id=formatted_trace_id
+        )
+
+with gr.Blocks() as demo:
+    chatbot = gr.Chatbot(label="채팅", type="messages")
+    prompt_box = gr.Textbox(placeholder="메시지를 입력하세요...", label="메시지")
+
+    # 사용자가 프롬프트에서 'Enter'를 누르면 'respond' 실행
+    prompt_box.submit(
+        fn=respond,
+        inputs=[prompt_box, chatbot],
+        outputs=chatbot
+    )
+
+    # 사용자가 메시지의 '좋아요' 버튼을 클릭하면 'handle_like' 실행
+    chatbot.like(handle_like, None, None)
+
+demo.launch()
+
+```
+
+사용자 피드백은 관찰 가능성 도구에서 캡처됩니다:
+
+![Langfuse에서 사용자 피드백 캡처](https://huggingface.co/datasets/agents-course/course-images/resolve/main/en/bonus-unit2/user-feedback-gradio.png)
+
+#### 5. LLM-as-a-Judge
+
+LLM-as-a-Judge는 에이전트의 출력을 자동으로 평가하는 또 다른 방법입니다. 출력의 정확성, 독성, 스타일 또는 관심 있는 다른 기준을 평가하기 위해 별도의 LLM 호출을 설정할 수 있습니다.
+
+**워크플로우**:
+1. **평가 템플릿**을 정의합니다(예: "텍스트가 독성이 있는지 확인").
+2. 에이전트가 출력을 생성할 때마다 해당 출력을 템플릿과 함께 "판사" LLM에 전달합니다.
+3. 판사 LLM은 관찰 가능성 도구에 기록할 등급이나 레이블로 응답합니다.
+
+Langfuse의 예시:
+
+![LLM-as-a-Judge 평가 템플릿](https://huggingface.co/datasets/agents-course/course-images/resolve/main/en/bonus-unit2/evaluator-template.png)
+![LLM-as-a-Judge 평가자](https://huggingface.co/datasets/agents-course/course-images/resolve/main/en/bonus-unit2/evaluator.png)
+
+
+```python
+# 예시: 에이전트의 출력이 독성이 있는지 확인
+from smolagents import (CodeAgent, DuckDuckGoSearchTool, InferenceClientModel)
+
+search_tool = DuckDuckGoSearchTool()
+agent = CodeAgent(tools=[search_tool], model=InferenceClientModel())
+
+agent.run("당근을 먹으면 시력이 개선될 수 있을까요?")
+```
+
+이 예시의 답변이 "독성이 없음"으로 판단된 것을 볼 수 있습니다.
+
+![LLM-as-a-Judge 평가 점수](https://huggingface.co/datasets/agents-course/course-images/resolve/main/en/bonus-unit2/llm-as-a-judge-score.png)
+
+#### 6. 관찰 가능성 메트릭 개요
+
+이러한 모든 메트릭은 대시보드에서 함께 시각화할 수 있습니다. 이를 통해 많은 세션에서 에이전트의 성능을 빠르게 확인하고 시간에 따른 품질 메트릭을 추적할 수 있습니다.
+
+![관찰 가능성 메트릭 개요](https://huggingface.co/datasets/agents-course/course-images/resolve/main/en/bonus-unit2/langfuse-dashboard.png)
+
+## 오프라인 평가
+
+온라인 평가는 실시간 피드백에 필수적이지만, **오프라인 평가**—개발 전이나 개발 중에 체계적인 검사—도 필요합니다. 이는 변경사항을 프로덕션에 적용하기 전에 품질과 신뢰성을 유지하는 데 도움이 됩니다.
+
+### 데이터셋 평가
+
+오프라인 평가에서는 일반적으로:
+1. 벤치마크 데이터셋(프롬프트와 예상 출력 쌍 포함)을 가집니다.
+2. 해당 데이터셋에서 에이전트를 실행합니다.
+3. 출력을 예상 결과와 비교하거나 추가 점수 메커니즘을 사용합니다.
+
+아래에서는 수학 문제와 해결책을 포함하는 [GSM8K 데이터셋](https://huggingface.co/datasets/gsm8k)을 사용하여 이 접근 방식을 시연합니다.
+
+
+```python
+import pandas as pd
+from datasets import load_dataset
+
+# Hugging Face에서 GSM8K 가져오기
+dataset = load_dataset("openai/gsm8k", 'main', split='train')
+df = pd.DataFrame(dataset)
+print("GSM8K 데이터셋의 처음 몇 행:")
+print(df.head())
+```
+
+다음으로, 실행을 추적하기 위해 Langfuse에 데이터셋 엔티티를 생성합니다. 그런 다음, 데이터셋의 각 항목을 시스템에 추가합니다. (Langfuse를 사용하지 않는 경우, 분석을 위해 이를 자체 데이터베이스나 로컬 파일에 저장할 수 있습니다.)
+
+
+```python
+from langfuse import Langfuse
+langfuse = Langfuse()
+
+langfuse_dataset_name = "gsm8k_dataset_huggingface"
+
+# Langfuse에 데이터셋 생성
+langfuse.create_dataset(
+    name=langfuse_dataset_name,
+    description="Huggingface에서 업로드된 GSM8K 벤치마크 데이터셋",
+    metadata={
+        "date": "2025-03-10", 
+        "type": "benchmark"
+    }
+)
+```
+
+
+```python
+for idx, row in df.iterrows():
+    langfuse.create_dataset_item(
+        dataset_name=langfuse_dataset_name,
+        input={"text": row["question"]},
+        expected_output={"text": row["answer"]},
+        metadata={"source_index": idx}
+    )
+    if idx >= 9: # 데모를 위해 처음 10개 항목만 업로드
+        break
+```
+
+![Langfuse의 데이터셋 항목](https://huggingface.co/datasets/agents-course/course-images/resolve/main/en/bonus-unit2/example-dataset.png)
+
+#### 데이터셋에서 에이전트 실행하기
+
+다음과 같은 `run_smolagent()` 헬퍼 함수를 정의합니다:
+1. OpenTelemetry 스팬을 시작합니다.
+2. 프롬프트에서 에이전트를 실행합니다.
+3. Langfuse에 추적 ID를 기록합니다.
+
+그런 다음, 각 데이터셋 항목을 반복하고 에이전트를 실행하며 추적을 데이터셋 항목에 연결합니다. 원하는 경우 빠른 평가 점수도 첨부할 수 있습니다.
+
+
+```python
+from opentelemetry.trace import format_trace_id
+from smolagents import (CodeAgent, InferenceClientModel, LiteLLMModel)
+
+# 예시: InferenceClientModel 또는 LiteLLMModel을 사용하여 openai, anthropic, gemini 등 모델에 접근:
+model = InferenceClientModel()
+
+agent = CodeAgent(
+    tools=[],
+    model=model,
+    add_base_tools=True
+)
+
+def run_smolagent(question):
+    with tracer.start_as_current_span("Smolagent-Trace") as span:
+        span.set_attribute("langfuse.tag", "dataset-run")
+        output = agent.run(question)
+
+        current_span = trace.get_current_span()
+        span_context = current_span.get_span_context()
+        trace_id = span_context.trace_id
+        formatted_trace_id = format_trace_id(trace_id)
+
+        langfuse_trace = langfuse.trace(
+            id=formatted_trace_id, 
+            input=question, 
+            output=output
+        )
+    return langfuse_trace, output
+```
+
+
+```python
+dataset = langfuse.get_dataset(langfuse_dataset_name)
+
+# 각 데이터셋 항목에 대해 에이전트 실행(위에서 처음 10개로 제한)
+for item in dataset.items:
+    langfuse_trace, output = run_smolagent(item.input["text"])
+
+    # 분석을 위해 추적을 데이터셋 항목에 연결
+    item.link(
+        langfuse_trace,
+        run_name="smolagent-notebook-run-01",
+        run_metadata={ "model": model.model_id }
+    )
+
+    # 선택적으로, 데모를 위한 빠른 평가 점수 저장
+    langfuse_trace.score(
+        name="<example_eval>",
+        value=1,
+        comment="이것은 코멘트입니다"
+    )
+
+# 모든 텔레메트리가 전송되도록 데이터 플러시
+langfuse.flush()
+```
+
+다음과 같은 다른 요소로 이 프로세스를 반복할 수 있습니다:
+- 모델(OpenAI GPT, 로컬 LLM 등)
+- 도구(검색 vs. 검색 없음)
+- 프롬프트(다른 시스템 메시지)
+
+그런 다음 관찰 가능성 도구에서 나란히 비교할 수 있습니다:
+
+![데이터셋 실행 개요](https://huggingface.co/datasets/agents-course/course-images/resolve/main/en/bonus-unit2/dataset_runs.png)
+![데이터셋 실행 비교](https://huggingface.co/datasets/agents-course/course-images/resolve/main/en/bonus-unit2/dataset-run-comparison.png)
+
+
+## 마무리
+
+이 노트북에서 우리는 다음을 다루었습니다:
+1. smolagents + OpenTelemetry 익스포터를 사용하여 **관찰 가능성 설정**
+2. 간단한 에이전트를 실행하여 **계측 확인**
+3. 관찰 가능성 도구를 통해 **상세 메트릭**(비용, 지연 시간 등) 캡처
+4. Gradio 인터페이스를 통한 **사용자 피드백 수집**
+5. 출력을 자동으로 평가하기 위한 **LLM-as-a-Judge 사용**
+6. 벤치마크 데이터셋을 사용한 **오프라인 평가 수행**
+
+🤗 즐거운 코딩 되세요! 

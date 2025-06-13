@@ -1,0 +1,69 @@
+# `smolagents` 소개
+
+<img src="https://huggingface.co/datasets/agents-course/course-images/resolve/main/en/unit2/smolagents/thumbnail.jpg" alt="Unit 2.1 Thumbnail"/>
+
+[`smolagents`](https://github.com/huggingface/smolagents) 라이브러리를 사용하여 **효과적인 에이전트를 구축하는 방법**을 배우는 이 모듈에 오신 것을 환영합니다. 이 라이브러리는 강력한 AI 에이전트를 생성하기 위한 경량 프레임워크를 제공합니다.
+
+`smolagents`는 Hugging Face 라이브러리입니다. 따라서 smolagents [`저장소`](https://github.com/huggingface/smolagents)에 **스타**를 눌러주시면 감사하겠습니다:
+<img src="https://huggingface.co/datasets/agents-course/course-images/resolve/main/en/unit2/smolagents/star_smolagents.gif" alt="staring smolagents"/>
+
+## 모듈 개요
+
+이 모듈은 `smolagents`를 사용하여 지능형 에이전트를 구축하기 위한 핵심 개념과 실용적인 전략에 대한 포괄적인 개요를 제공합니다.
+
+많은 오픈소스 프레임워크가 있기 때문에, `smolagents`가 유용한 옵션이 되는 구성 요소와 기능을 이해하거나 다른 솔루션이 더 적합할 수 있는 시점을 결정하는 것이 중요합니다.
+
+소프트웨어 개발 작업을 위한 코드 에이전트, 모듈식 함수 기반 워크플로우를 생성하는 도구 호출 에이전트, 정보에 접근하고 종합하는 검색 에이전트 등 중요한 에이전트 유형을 탐색할 것입니다.
+
+또한 여러 에이전트의 오케스트레이션과 비전 기능 및 웹 브라우징의 통합을 다룰 것입니다. 이는 동적이고 컨텍스트 인식 애플리케이션을 위한 새로운 가능성을 열어줍니다.
+
+이 단위에서는 1단위의 에이전트인 Alfred가 다시 등장합니다. 이번에는 내부 작동에 `smolagents` 프레임워크를 사용합니다. Alfred가 다양한 작업을 수행하면서 이 프레임워크의 핵심 개념을 함께 탐색할 것입니다. Alfred는 Wayne 가족 🦇이 없는 동안 Wayne Manor에서 파티를 준비하고 있으며, 할 일이 많습니다. `smolagents`로 이러한 작업을 처리하는 Alfred의 여정과 방법을 함께 살펴보세요!
+
+<Tip>
+
+이 단위에서는 `smolagents` 라이브러리로 AI 에이전트를 구축하는 방법을 배웁니다. 여러분의 에이전트는 데이터를 검색하고, 코드를 실행하고, 웹 페이지와 상호작용할 수 있게 됩니다. 또한 여러 에이전트를 결합하여 더 강력한 시스템을 만드는 방법도 배우게 됩니다.
+
+</Tip>
+
+![에이전트 Alfred](https://huggingface.co/datasets/agents-course/course-images/resolve/main/en/unit1/this-is-alfred.jpg)
+
+## 내용
+
+`smolagents` 단위에서 다루는 내용은 다음과 같습니다:
+
+### 1️⃣ [smolagents를 사용하는 이유](./why_use_smolagents)
+
+`smolagents`는 애플리케이션 개발을 위해 사용할 수 있는 많은 오픈소스 에이전트 프레임워크 중 하나입니다. 대안으로는 이 코스의 다른 모듈에서 다루는 `LlamaIndex`와 `LangGraph`가 있습니다. `smolagents`는 특정 사용 사례에 적합할 수 있는 여러 주요 기능을 제공하지만, 프레임워크를 선택할 때는 항상 모든 옵션을 고려해야 합니다. `smolagents` 사용의 장단점을 탐색하여 프로젝트 요구사항에 기반한 정보에 입각한 결정을 내릴 수 있도록 도와드리겠습니다.
+
+### 2️⃣ [CodeAgents](./code_agents)
+
+`CodeAgents`는 `smolagents`의 주요 에이전트 유형입니다. JSON이나 텍스트를 생성하는 대신, 이러한 에이전트는 작업을 수행하기 위한 Python 코드를 생성합니다. 이 모듈에서는 그들의 목적, 기능, 작동 방식과 함께 실제 예제를 통해 그들의 능력을 보여줍니다.
+
+### 3️⃣ [ToolCallingAgents](./tool_calling_agents)
+
+`ToolCallingAgents`는 `smolagents`가 지원하는 두 번째 유형의 에이전트입니다. Python 코드를 생성하는 `CodeAgents`와 달리, 이러한 에이전트는 시스템이 작업을 실행하기 위해 파싱하고 해석해야 하는 JSON/텍스트 블롭에 의존합니다. 이 모듈에서는 그들의 기능, `CodeAgents`와의 주요 차이점을 다루고, 사용 예제를 제공합니다.
+
+### 4️⃣ [도구](./tools)
+
+1단위에서 보았듯이, 도구는 에이전트 시스템 내에서 LLM이 사용할 수 있는 함수이며, 에이전트 동작의 필수적인 구성 요소입니다. 이 모듈에서는 `Tool` 클래스나 `@tool` 데코레이터를 사용하여 도구를 생성하는 방법, 구조, 다양한 구현 방법을 다룹니다. 또한 기본 도구 상자, 커뮤니티와 도구를 공유하는 방법, 에이전트에서 사용할 커뮤니티 기여 도구를 로드하는 방법도 배우게 됩니다.
+
+### 5️⃣ [검색 에이전트](./retrieval_agents)
+
+검색 에이전트는 모델이 지식 베이스에 접근할 수 있게 하여 여러 소스에서 정보를 검색, 종합, 검색할 수 있게 합니다. 이들은 효율적인 검색을 위해 벡터 스토어를 활용하고 **검색 증강 생성(Retrieval-Augmented Generation, RAG)** 패턴을 구현합니다. 이러한 에이전트는 메모리 시스템을 통해 대화 컨텍스트를 유지하면서 웹 검색과 사용자 정의 지식 베이스를 통합하는 데 특히 유용합니다. 이 모듈에서는 강력한 정보 검색을 위한 폴백 메커니즘을 포함한 구현 전략을 탐색합니다.
+
+### 6️⃣ [다중 에이전트 시스템](./multi_agent_systems)
+
+여러 에이전트를 효과적으로 오케스트레이션하는 것은 강력한 다중 에이전트 시스템을 구축하는 데 중요합니다. 웹 검색 에이전트와 코드 실행 에이전트와 같이 서로 다른 기능을 가진 에이전트를 결합하여 더 정교한 솔루션을 만들 수 있습니다. 이 모듈에서는 효율성과 신뢰성을 최대화하기 위한 다중 에이전트 시스템의 설계, 구현, 관리에 중점을 둡니다.
+
+### 7️⃣ [비전 및 브라우저 에이전트](./vision_agents)
+
+비전 에이전트는 **비전-언어 모델(Vision-Language Models, VLM)**을 통합하여 시각적 정보를 처리하고 해석할 수 있게 함으로써 전통적인 에이전트 기능을 확장합니다. 이 모듈에서는 VLM 기반 에이전트를 설계하고 통합하는 방법을 탐색하여 이미지 기반 추론, 시각적 데이터 분석, 멀티모달 상호작용과 같은 고급 기능을 구현합니다. 또한 비전 에이전트를 사용하여 웹을 탐색하고 정보를 추출할 수 있는 브라우저 에이전트를 구축할 것입니다.
+
+## 리소스
+
+- [smolagents 문서](https://huggingface.co/docs/smolagents) - smolagents 라이브러리의 공식 문서
+- [효과적인 에이전트 구축](https://www.anthropic.com/research/building-effective-agents) - 에이전트 아키텍처에 대한 연구 논문
+- [에이전트 가이드라인](https://huggingface.co/docs/smolagents/tutorials/building_good_agents) - 신뢰할 수 있는 에이전트 구축을 위한 모범 사례
+- [LangGraph 에이전트](https://langchain-ai.github.io/langgraph/) - 에이전트 구현의 추가 예제
+- [함수 호출 가이드](https://platform.openai.com/docs/guides/function-calling) - LLM의 함수 호출 이해하기
+- [RAG 모범 사례](https://www.pinecone.io/learn/retrieval-augmented-generation/) - 효과적인 RAG 구현 가이드 

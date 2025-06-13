@@ -1,0 +1,250 @@
+# 손님 이야기를 위한 RAG 도구 만들기
+
+여러분의 신뢰할 수 있는 에이전트인 Alfred는 세기의 가장 화려한 갤라를 준비하고 있습니다. 행사가 원활하게 진행되도록 하기 위해, Alfred는 각 손님에 대한 최신 정보에 빠르게 접근할 수 있어야 합니다. 커스텀 데이터셋으로 구동되는 검색 증강 생성(Retrieval-Augmented Generation, RAG) 도구를 만들어 Alfred를 도와보겠습니다.
+
+## 왜 갤라에 RAG를 사용하나요?
+
+Alfred가 손님들 사이를 돌아다니며 순간적으로 각 사람에 대한 특정 세부 정보를 기억해야 한다고 상상해보세요. 전통적인 LLM은 다음과 같은 이유로 이 작업에 어려움을 겪을 수 있습니다:
+
+1. 손님 목록은 여러분의 이벤트에 특화되어 있어 모델의 훈련 데이터에 없습니다
+2. 손님 정보는 자주 변경되거나 업데이트될 수 있습니다
+3. Alfred는 이메일 주소와 같은 정확한 세부 정보를 검색해야 합니다
+
+이것이 바로 검색 증강 생성(RAG)이 빛을 발하는 순간입니다! 검색 시스템과 LLM을 결합함으로써, Alfred는 필요할 때 손님들에 대한 정확하고 최신 정보에 접근할 수 있습니다.
+
+<Tip>
+
+이 사용 사례에서는 코스에서 다룬 프레임워크 중 하나를 선택할 수 있습니다. 코드 탭에서 선호하는 옵션을 선택하세요.
+
+</Tip>
+
+## 애플리케이션 설정하기
+
+이 유닛에서는 구조화된 Python 프로젝트로 HF Space 내에서 에이전트를 개발할 것입니다. 이 접근 방식은 서로 다른 기능을 별도의 파일로 구성하여 깔끔하고 모듈화된 코드를 유지하는 데 도움이 됩니다. 또한 이는 애플리케이션을 공개 사용을 위해 배포하는 더 현실적인 사용 사례를 만듭니다.
+
+### 프로젝트 구조
+
+- **`tools.py`** – 에이전트를 위한 보조 도구를 제공합니다.
+- **`retriever.py`** – 지식 접근을 지원하는 검색 기능을 구현합니다.
+- **`app.py`** – 모든 구성 요소를 완전한 기능을 갖춘 에이전트로 통합하며, 이 유닛의 마지막 부분에서 완성할 것입니다.
+
+실제 참고를 위해, 이 유닛에서 개발된 에이전트 RAG가 실행 중인 [이 HF Space](https://huggingface.co/spaces/agents-course/Unit_3_Agentic_RAG)를 확인해보세요. 자유롭게 복제하고 실험해보세요!
+
+아래에서 에이전트를 직접 테스트할 수 있습니다:
+
+<iframe
+	src="https://agents-course-unit-3-agentic-rag.hf.space"
+	frameborder="0"
+	width="850"
+	height="450"
+></iframe>
+
+## 데이터셋 개요
+
+우리의 데이터셋 [`agents-course/unit3-invitees`](https://huggingface.co/datasets/agents-course/unit3-invitees/)는 각 손님에 대해 다음 필드를 포함합니다:
+
+- **이름**: 손님의 전체 이름
+- **관계**: 손님이 주최자와 어떤 관계인지
+- **설명**: 손님에 대한 간단한 전기나 흥미로운 사실
+- **이메일 주소**: 초대장이나 후속 조치를 보내기 위한 연락처 정보
+
+아래는 데이터셋의 미리보기입니다:
+<iframe
+  src="https://huggingface.co/datasets/agents-course/unit3-invitees/embed/viewer/default/train"
+  frameborder="0"
+  width="100%"
+  height="560px"
+></iframe>
+
+<Tip>
+실제 시나리오에서는 이 데이터셋을 확장하여 식이 선호도, 선물 관심사, 피해야 할 대화 주제, 그리고 주최자에게 도움이 되는 다른 세부 정보를 포함할 수 있습니다.
+</Tip>
+
+## 손님 정보 도구 구축하기
+
+Alfred가 갤라 중에 손님 정보를 빠르게 검색할 수 있는 커스텀 도구를 만들겠습니다. 이를 세 가지 관리 가능한 단계로 나누어 보겠습니다:
+
+1. 데이터셋 로드 및 준비
+2. 검색 도구 생성
+3. Alfred와 도구 통합
+
+데이터셋 로드 및 준비부터 시작해보겠습니다!
+
+### 1단계: 데이터셋 로드 및 준비
+
+먼저, 원시 손님 데이터를 검색에 최적화된 형식으로 변환해야 합니다.
+
+<hfoptions id="agents-frameworks">
+<hfoption id="smolagents">
+
+Hugging Face의 `datasets` 라이브러리를 사용하여 데이터셋을 로드하고 `langchain.docstore.document` 모듈의 `Document` 객체 리스트로 변환하겠습니다.
+
+```python
+import datasets
+from langchain.docstore.document import Document
+
+# 데이터셋 로드
+guest_dataset = datasets.load_dataset("agents-course/unit3-invitees", split="train")
+
+# 데이터셋 항목을 Document 객체로 변환
+docs = [
+    Document(
+        page_content="\n".join([
+            f"Name: {guest['name']}",
+            f"Relation: {guest['relation']}",
+            f"Description: {guest['description']}",
+            f"Email: {guest['email']}"
+        ]),
+        metadata={"name": guest["name"]}
+    )
+    for guest in guest_dataset
+]
+
+```
+
+</hfoption>
+<hfoption id="llama-index">
+
+Hugging Face의 `datasets` 라이브러리를 사용하여 데이터셋을 로드하고 `llama_index.core.schema` 모듈의 `Document` 객체 리스트로 변환하겠습니다.
+
+```python
+import datasets
+from llama_index.core.schema import Document
+
+# 데이터셋 로드
+guest_dataset = datasets.load_dataset("agents-course/unit3-invitees", split="train")
+
+# 데이터셋 항목을 Document 객체로 변환
+docs = [
+    Document(
+        text="\n".join([
+            f"Name: {guest_dataset['name'][i]}",
+            f"Relation: {guest_dataset['relation'][i]}",
+            f"Description: {guest_dataset['description'][i]}",
+            f"Email: {guest_dataset['email'][i]}"
+        ]),
+        metadata={"name": guest_dataset['name'][i]}
+    )
+    for i in range(len(guest_dataset))
+]
+```
+
+</hfoption>
+<hfoption id="langgraph">
+
+Hugging Face의 `datasets` 라이브러리를 사용하여 데이터셋을 로드하고 `langchain.docstore.document` 모듈의 `Document` 객체 리스트로 변환하겠습니다.
+
+```python
+import datasets
+from langchain.docstore.document import Document
+
+# 데이터셋 로드
+guest_dataset = datasets.load_dataset("agents-course/unit3-invitees", split="train")
+
+# 데이터셋 항목을 Document 객체로 변환
+docs = [
+    Document(
+        page_content="\n".join([
+            f"Name: {guest['name']}",
+            f"Relation: {guest['relation']}",
+            f"Description: {guest['description']}",
+            f"Email: {guest['email']}"
+        ]),
+        metadata={"name": guest["name"]}
+    )
+    for guest in guest_dataset
+]
+```
+
+</hfoption>
+</hfoptions>
+
+위의 코드에서 우리는:
+- 데이터셋을 로드합니다
+- 각 손님 항목을 형식이 지정된 내용이 있는 `Document` 객체로 변환합니다
+- `Document` 객체를 리스트에 저장합니다
+
+이제 모든 데이터가 잘 준비되어 있으므로 검색 구성을 시작할 수 있습니다.
+
+### 2단계: 검색 도구 생성
+
+이제 Alfred가 손님 정보를 검색할 수 있는 커스텀 도구를 만들어보겠습니다.
+
+<hfoptions id="agents-frameworks">
+<hfoption id="smolagents">
+
+`langchain_community.retrievers` 모듈의 `BM25Retriever`를 사용하여 검색 도구를 만들겠습니다.
+
+<Tip>
+  `BM25Retriever`는 검색을 시작하기에 좋은 지점이지만, 더 고급 의미 검색을 위해서는 [sentence-transformers](https://www.sbert.net/)의 임베딩 기반 검색기를 고려해볼 수 있습니다.
+</Tip>
+
+```python
+from smolagents import Tool
+from langchain_community.retrievers import BM25Retriever
+
+class GuestInfoRetrieverTool(Tool):
+    name = "guest_info_retriever"
+    description = "Retrieves detailed information about gala guests based on their name or relation."
+    inputs = {
+        "query": {
+            "type": "string",
+            "description": "The name or relation of the guest you want information about."
+        }
+    }
+    output_type = "string"
+
+    def __init__(self, docs):
+        self.is_initialized = False
+        self.retriever = BM25Retriever.from_documents(docs)
+
+    def forward(self, query: str):
+        results = self.retriever.get_relevant_documents(query)
+        if results:
+            return "\n\n".join([doc.page_content for doc in results[:3]])
+        else:
+            return "No matching guest information found."
+
+# 도구 초기화
+guest_info_tool = GuestInfoRetrieverTool(docs)
+```
+
+이 도구를 단계별로 이해해보겠습니다:
+- `name`과 `description`은 에이전트가 이 도구를 언제, 어떻게 사용해야 하는지 이해하는 데 도움이 됩니다
+- `inputs`는 도구가 기대하는 매개변수를 정의합니다 (이 경우 검색 쿼리)
+- 우리는 임베딩이 필요 없는 강력한 텍스트 검색 알고리즘인 `BM25Retriever`를 사용합니다
+- `forward` 메서드는 쿼리를 처리하고 가장 관련성 높은 손님 정보를 반환합니다
+
+</hfoption>
+<hfoption id="llama-index">
+
+`llama_index.retrievers.bm25` 모듈의 `BM25Retriever`를 사용하여 검색 도구를 만들겠습니다.
+
+<Tip>
+  `BM25Retriever`는 검색을 시작하기에 좋은 지점이지만, 더 고급 의미 검색을 위해서는 [sentence-transformers](https://www.sbert.net/)의 임베딩 기반 검색기를 고려해볼 수 있습니다.
+</Tip>
+
+```python
+from llama_index.core.tools import FunctionTool
+from llama_index.retrievers.bm25 import BM25Retriever
+
+bm25_retriever = BM25Retriever.from_defaults(nodes=docs)
+
+def get_guest_info_retriever(query: str) -> str:
+    """Retrieves detailed information about gala guests based on their name or relation."""
+    results = bm25_retriever.retrieve(query)
+    if results:
+        return "\n\n".join([doc.text for doc in results[:3]])
+    else:
+        return "No matching guest information found."
+
+# 도구 초기화
+guest_info_tool = FunctionTool.from_defaults(get_guest_info_retriever)
+```
+
+이 도구를 단계별로 이해해보겠습니다:
+- 독스트링은 에이전트가 이 도구를 언제, 어떻게 사용해야 하는지 이해하는 데 도움이 됩니다
+- 타입 데코레이터는 도구가 기대하는 매개변수를 정의합니다 (이 경우 검색 쿼리)
+- 우리는 임베딩이 필요 없는 강력한 텍스트 검색 알고리즘인 `BM25Retriever`를 사용합니다
+- 메서드는 쿼리를 처리하고 가장 관련성 높은 손님 정보를 반환합니다
+</rewritten_file> 

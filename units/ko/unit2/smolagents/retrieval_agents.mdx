@@ -1,0 +1,164 @@
+<CourseFloatingBanner chapter={2}
+  classNames="absolute z-10 right-0 top-0"
+  notebooks={[
+    {label: "Google Colab", value: "https://colab.research.google.com/#fileId=https://huggingface.co/agents-course/notebooks/blob/main/unit2/smolagents/retrieval_agents.ipynb"},
+]} />
+
+# 에이전트 기반 RAG 시스템 구축하기
+
+<Tip>
+<a href="https://huggingface.co/agents-course/notebooks/blob/main/unit2/smolagents/retrieval_agents.ipynb" target="_blank">이 노트북</a>의 코드를 따라하실 수 있으며, Google Colab에서 실행하실 수 있습니다.
+</Tip>
+
+검색 증강 생성(Retrieval Augmented Generation, RAG) 시스템은 데이터 검색과 생성 모델의 기능을 결합하여 맥락 인식 응답을 제공합니다. 예를 들어, 사용자의 쿼리가 검색 엔진으로 전달되고, 검색된 결과가 쿼리와 함께 모델에 제공됩니다. 그런 다음 모델은 쿼리와 검색된 정보를 기반으로 응답을 생성합니다.
+
+에이전트 기반 RAG(Retrieval-Augmented Generation)는 **자율 에이전트와 동적 지식 검색을 결합**하여 전통적인 RAG 시스템을 확장합니다. 
+
+전통적인 RAG 시스템이 검색된 데이터를 기반으로 쿼리에 답변하기 위해 LLM을 사용하는 반면, 에이전트 기반 RAG는 **검색과 생성 프로세스를 지능적으로 제어**하여 효율성과 정확성을 향상시킵니다.
+
+전통적인 RAG 시스템은 **단일 검색 단계에 의존**하고 사용자의 쿼리와 직접적인 의미적 유사성에 초점을 맞추는 등 주요 한계에 직면해 있어, 관련 정보를 놓칠 수 있습니다. 
+
+에이전트 기반 RAG는 에이전트가 자율적으로 검색 쿼리를 구성하고, 검색된 결과를 비판적으로 검토하며, 더 맞춤화되고 포괄적인 출력을 위해 여러 검색 단계를 수행할 수 있게 함으로써 이러한 문제를 해결합니다.
+
+## DuckDuckGo를 사용한 기본 검색
+
+DuckDuckGo를 사용하여 웹을 검색할 수 있는 간단한 에이전트를 만들어보겠습니다. 이 에이전트는 정보를 검색하고 쿼리에 답변하기 위해 응답을 종합할 것입니다. 에이전트 기반 RAG를 통해 알프레드의 에이전트는 다음과 같은 작업을 수행할 수 있습니다:
+
+* 최신 슈퍼히어로 파티 트렌드 검색
+* 럭셔리 요소를 포함하도록 결과 구체화
+* 정보를 완전한 계획으로 종합
+
+알프레드의 에이전트가 이를 달성하는 방법은 다음과 같습니다:
+
+```python
+from smolagents import CodeAgent, DuckDuckGoSearchTool, InferenceClientModel
+
+# 검색 도구 초기화
+search_tool = DuckDuckGoSearchTool()
+
+# 모델 초기화
+model = InferenceClientModel()
+
+agent = CodeAgent(
+    model=model,
+    tools=[search_tool],
+)
+
+# 사용 예시
+response = agent.run(
+    "럭셔리 슈퍼히어로 테마 파티 아이디어를 검색해주세요. 장식, 엔터테인먼트, 케이터링을 포함해주세요."
+)
+print(response)
+```
+
+에이전트는 다음 프로세스를 따릅니다:
+
+1. **요청 분석:** 알프레드의 에이전트는 쿼리의 핵심 요소를 식별합니다—럭셔리 슈퍼히어로 테마 파티 계획, 장식, 엔터테인먼트, 케이터링에 초점을 맞춥니다.
+2. **검색 수행:** 에이전트는 DuckDuckGo를 활용하여 가장 관련성 있고 최신 정보를 검색하여, 럭셔리한 이벤트에 대한 알프레드의 세련된 선호도와 일치하는지 확인합니다.
+3. **정보 종합:** 결과를 수집한 후, 에이전트는 이를 파티의 모든 측면을 다루는 일관된, 실행 가능한 계획으로 처리합니다.
+4. **향후 참조를 위해 저장:** 에이전트는 검색된 정보를 저장하여 향후 이벤트 계획 시 쉽게 접근할 수 있게 하여, 후속 작업의 효율성을 최적화합니다.
+
+## 커스텀 지식 베이스 도구
+
+특수 작업을 위해 커스텀 지식 베이스는 매우 유용할 수 있습니다. 기술 문서나 특수 지식의 벡터 데이터베이스를 쿼리하는 도구를 만들어보겠습니다. 의미적 검색을 사용하여, 에이전트는 알프레드의 필요에 가장 관련성 있는 정보를 찾을 수 있습니다.
+
+벡터 데이터베이스는 머신 러닝 모델에 의해 생성된 텍스트나 다른 데이터의 수치적 표현(임베딩)을 저장합니다. 고차원 공간에서 유사한 의미를 식별함으로써 의미적 검색을 가능하게 합니다.
+
+이 접근 방식은 미리 정의된 지식과 의미적 검색을 결합하여 이벤트 계획을 위한 맥락 인식 솔루션을 제공합니다. 특수 지식에 접근함으로써, 알프레드는 파티의 모든 세부 사항을 완벽하게 할 수 있습니다.
+
+이 예제에서는 커스텀 지식 베이스에서 파티 계획 아이디어를 검색하는 도구를 만들겠습니다. BM25 검색기를 사용하여 지식 베이스를 검색하고 상위 결과를 반환하며, `RecursiveCharacterTextSplitter`를 사용하여 더 효율적인 검색을 위해 문서를 더 작은 청크로 분할합니다.
+
+```python
+from langchain.docstore.document import Document
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from smolagents import Tool
+from langchain_community.retrievers import BM25Retriever
+from smolagents import CodeAgent, InferenceClientModel
+
+class PartyPlanningRetrieverTool(Tool):
+    name = "party_planning_retriever"
+    description = "의미적 검색을 사용하여 웨인 맨션에서의 알프레드의 슈퍼히어로 테마 파티를 위한 관련 파티 계획 아이디어를 검색합니다."
+    inputs = {
+        "query": {
+            "type": "string",
+            "description": "수행할 쿼리. 이것은 파티 계획이나 슈퍼히어로 테마와 관련된 쿼리여야 합니다.",
+        }
+    }
+    output_type = "string"
+
+    def __init__(self, docs, **kwargs):
+        super().__init__(**kwargs)
+        self.retriever = BM25Retriever.from_documents(
+            docs, k=5  # 상위 5개 문서 검색
+        )
+
+    def forward(self, query: str) -> str:
+        assert isinstance(query, str), "검색 쿼리는 문자열이어야 합니다"
+
+        docs = self.retriever.invoke(
+            query,
+        )
+        return "\n검색된 아이디어:\n" + "".join(
+            [
+                f"\n\n===== 아이디어 {str(i)} =====\n" + doc.page_content
+                for i, doc in enumerate(docs)
+            ]
+        )
+
+# 파티 계획에 대한 지식 베이스 시뮬레이션
+party_ideas = [
+    {"text": "금색 액센트와 벨벳 커튼을 포함한 럭셔리한 장식의 슈퍼히어로 테마 가면 무도회.", "source": "파티 아이디어 1"},
+    {"text": "배트맨과 원더우먼과 같은 슈퍼히어로를 위한 테마 음악을 연주할 수 있는 전문 DJ를 고용하세요.", "source": "엔터테인먼트 아이디어"},
+    {"text": "케이터링을 위해 '헐크의 그린 스무디'와 '아이언맨의 파워 스테이크'와 같이 슈퍼히어로의 이름을 딴 요리를 제공하세요.", "source": "케이터링 아이디어"},
+    {"text": "장소 주변에 고담과 다른 슈퍼히어로 도시의 아이콘 슈퍼히어로 로고와 투영으로 장식하세요.", "source": "장식 아이디어"},
+    {"text": "손님들이 슈퍼히어로 시뮬레이션에 참여하거나 테마 게임에서 경쟁할 수 있는 VR을 통한 인터랙티브 경험.", "source": "엔터테인먼트 아이디어"}
+]
+
+source_docs = [
+    Document(page_content=doc["text"], metadata={"source": doc["source"]})
+    for doc in party_ideas
+]
+
+# 더 효율적인 검색을 위해 문서를 더 작은 청크로 분할
+text_splitter = RecursiveCharacterTextSplitter(
+    chunk_size=500,
+    chunk_overlap=50,
+    add_start_index=True,
+    strip_whitespace=True,
+    separators=["\n\n", "\n", ".", " ", ""],
+)
+docs_processed = text_splitter.split_documents(source_docs)
+
+# 검색 도구 생성
+party_planning_retriever = PartyPlanningRetrieverTool(docs_processed)
+
+# 에이전트 초기화
+agent = CodeAgent(tools=[party_planning_retriever], model=InferenceClientModel())
+
+# 사용 예시
+response = agent.run(
+    "럭셔리 슈퍼히어로 테마 파티를 위한 아이디어를 찾아주세요. 엔터테인먼트, 케이터링, 장식 옵션을 포함해주세요."
+)
+
+print(response)
+```
+
+이 향상된 에이전트는 다음과 같은 작업을 수행할 수 있습니다:
+1. 먼저 관련 정보에 대한 문서를 확인
+2. 지식 베이스의 통찰력 결합
+3. 메모리에 대화 맥락 유지
+
+## 향상된 검색 기능
+
+에이전트 기반 RAG 시스템을 구축할 때, 에이전트는 다음과 같은 정교한 전략을 사용할 수 있습니다:
+
+1. **쿼리 재구성:** 원시 사용자 쿼리를 사용하는 대신, 에이전트는 대상 문서와 더 잘 일치하는 최적화된 검색어를 만들 수 있습니다.
+2. **다단계 검색:** 에이전트는 초기 결과를 사용하여 후속 쿼리를 알리는 여러 검색을 수행할 수 있습니다.
+3. **소스 통합:** 웹 검색과 로컬 문서와 같은 여러 소스에서 정보를 결합할 수 있습니다.
+4. **결과 검증:** 검색된 콘텐츠는 응답에 포함되기 전에 관련성과 정확성을 위해 분석될 수 있습니다.
+
+효과적인 에이전트 기반 RAG 시스템은 몇 가지 주요 측면을 신중하게 고려해야 합니다. 에이전트는 **쿼리 유형과 맥락에 따라 사용 가능한 도구들 사이에서 선택해야 합니다**. 메모리 시스템은 대화 기록을 유지하고 반복적인 검색을 피하는 데 도움이 됩니다. 대체 전략을 갖는 것은 주요 검색 방법이 실패하더라도 시스템이 여전히 가치를 제공할 수 있도록 합니다. 또한, 검증 단계를 구현하면 검색된 정보의 정확성과 관련성을 보장하는 데 도움이 됩니다.
+
+## 리소스
+
+- [Agentic RAG: 쿼리 재구성과 자체 쿼리로 RAG를 가속화하세요! 🚀](https://huggingface.co/learn/cookbook/agent_rag) - smolagents를 사용하여 에이전트 기반 RAG 시스템을 개발하기 위한 레시피. 

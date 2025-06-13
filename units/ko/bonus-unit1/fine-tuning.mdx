@@ -1,0 +1,47 @@
+# 함수 호출을 위해 모델을 파인튜닝해보세요
+
+이제 함수 호출을 위해 첫 번째 모델을 파인튜닝할 준비가 되었습니다 🔥.
+
+## 함수 호출을 위해 모델을 어떻게 훈련하나요?
+
+> 답변: **데이터**가 필요합니다
+
+모델 훈련 과정은 3단계로 나눌 수 있습니다:
+
+1. **모델은 대량의 데이터로 사전 훈련됩니다**. 이 단계의 결과물은 **사전 훈련된 모델**입니다. 예를 들어, [google/gemma-2-2b](https://huggingface.co/google/gemma-2-2b)가 있습니다. 이는 기본 모델이며 **강력한 지시 따르기 능력 없이 다음 토큰을 예측하는 방법만 알고 있습니다**.
+
+2. 채팅 맥락에서 유용하려면, 모델은 지시를 따르도록 **파인튜닝**되어야 합니다. 이 단계에서는 모델 제작자, 오픈소스 커뮤니티, 여러분, 또는 누구나 훈련할 수 있습니다. 예를 들어, [google/gemma-2-2b-it](https://huggingface.co/google/gemma-2-2b-it)는 Gemma 프로젝트의 Google 팀이 지시 튜닝한 모델입니다.
+
+3. 그런 다음 모델은 제작자의 선호도에 맞게 **정렬**될 수 있습니다. 예를 들어, 고객에게 결코 무례하지 않아야 하는 고객 서비스 채팅 모델이 있습니다.
+
+일반적으로 Gemini나 Mistral과 같은 완전한 제품은 **모든 3단계를 거치지만**, Hugging Face에서 찾을 수 있는 모델들은 이 훈련의 한 단계 이상을 완료한 것입니다.
+
+이 튜토리얼에서는 [google/gemma-2-2b-it](https://huggingface.co/google/gemma-2-2b-it)을 기반으로 함수 호출 모델을 구축할 것입니다. 기본 모델 [google/gemma-2-2b](https://huggingface.co/google/gemma-2-2b) 대신 파인튜닝된 모델 [google/gemma-2-2b-it](https://huggingface.co/google/gemma-2-2b-it)을 선택한 이유는 파인튜닝된 모델이 우리의 사용 사례에 맞게 개선되었기 때문입니다.
+
+사전 훈련된 모델에서 시작하면 **지시 따르기, 채팅, 그리고 함수 호출을 모두 학습하기 위해 더 많은 훈련이 필요할 것입니다**.
+
+지시 튜닝된 모델에서 시작함으로써, **모델이 학습해야 하는 정보의 양을 최소화**할 수 있습니다.
+
+## LoRA (대규모 언어 모델의 저순위 적응)
+
+LoRA는 훈련 가능한 파라미터의 수를 크게 **줄이는** 인기 있고 가벼운 훈련 기술입니다.
+
+이것은 **모델에 어댑터로 더 적은 수의 새로운 가중치를 삽입하여 훈련**하는 방식으로 작동합니다. 이로 인해 LoRA를 사용한 훈련이 훨씬 빠르고, 메모리 효율적이며, 더 작은 모델 가중치(수백 MB)를 생성하여 저장하고 공유하기 쉽습니다.
+
+<img src="https://huggingface.co/datasets/agents-course/course-images/resolve/main/en/unit1/blog_multi-lora-serving_LoRA.gif" alt="LoRA inference" width="50%"/>
+
+LoRA는 Transformer 레이어에 순위 분해 행렬 쌍을 추가하여 작동하며, 일반적으로 선형 레이어에 초점을 맞춥니다. 훈련 중에는 모델의 나머지 부분을 "고정"하고 새로 추가된 어댑터의 가중치만 업데이트합니다.
+
+이렇게 하면 어댑터의 가중치만 업데이트하면 되므로 훈련해야 하는 **파라미터**의 수가 크게 줄어듭니다.
+
+추론 중에는 입력이 어댑터와 기본 모델로 전달되거나, 이러한 어댑터 가중치를 기본 모델과 병합할 수 있어 추가 지연 시간 오버헤드가 없습니다.
+
+LoRA는 특히 **대규모** 언어 모델을 특정 작업이나 도메인에 적응시키면서 리소스 요구사항을 관리 가능하게 유지하는 데 유용합니다. 이는 모델 훈련에 **필요한** 메모리를 줄이는 데 도움이 됩니다.
+
+LoRA가 어떻게 작동하는지 더 자세히 알고 싶다면 이 [튜토리얼](https://huggingface.co/learn/nlp-course/chapter11/4?fw=pt)을 확인해보세요.
+
+## 함수 호출을 위해 모델 파인튜닝하기
+
+튜토리얼 노트북에 접근할 수 있습니다 👉 [여기](https://huggingface.co/agents-course/notebooks/blob/main/bonus-unit1/bonus-unit1.ipynb).
+
+그런 다음 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/#fileId=https://huggingface.co/agents-course/notebooks/blob/main/bonus-unit1/bonus-unit1.ipynb)를 클릭하여 Colab 노트북에서 실행할 수 있습니다. 

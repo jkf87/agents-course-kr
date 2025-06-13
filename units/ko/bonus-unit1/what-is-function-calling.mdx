@@ -1,0 +1,77 @@
+# 함수 호출이란 무엇인가요?
+
+함수 호출은 **LLM이 환경에 대해 액션을 취할 수 있는 방법**입니다. 이는 처음에 [GPT-4에서 소개](https://openai.com/index/function-calling-and-other-api-updates/)되었고, 나중에 다른 모델들에서도 재현되었습니다.
+
+에이전트의 도구와 마찬가지로, 함수 호출은 모델이 **환경에 대해 액션을 취할 수 있는 능력**을 제공합니다. 그러나 함수 호출 능력은 **모델에 의해 학습되며**, 다른 에이전트 기술들보다 **프롬프팅에 덜 의존**합니다.
+
+유닛 1에서는 에이전트가 **도구를 사용하는 방법을 학습하지 않았습니다**. 우리는 단지 도구 목록을 제공했고, 모델이 **이러한 도구들을 사용하여 계획을 세우는 것을 일반화할 수 있다는** 사실에 의존했습니다.
+
+반면 여기서는 **함수 호출을 통해 에이전트가 도구를 사용하도록 파인튜닝(훈련)됩니다**.
+
+## 모델이 액션을 취하는 방법을 어떻게 "학습"하나요?
+
+유닛 1에서 우리는 에이전트의 일반적인 워크플로우를 살펴보았습니다. 사용자가 에이전트에게 도구들을 제공하고 쿼리로 프롬프트를 주면, 모델은 다음 단계를 반복합니다:
+
+1. *생각하기* : 목표를 달성하기 위해 어떤 액션을 취해야 할지 결정
+2. *행동하기* : 올바른 파라미터로 액션을 포맷팅하고 생성 중단
+3. *관찰하기* : 실행 결과를 받아옴
+
+API를 통한 모델과의 "일반적인" 대화에서는 대화가 다음과 같이 사용자와 어시스턴트 메시지 사이를 번갈아가며 진행됩니다:
+
+```python
+conversation = [
+    {"role": "user", "content": "I need help with my order"},
+    {"role": "assistant", "content": "I'd be happy to help. Could you provide your order number?"},
+    {"role": "user", "content": "It's ORDER-123"},
+]
+```
+
+함수 호출은 **대화에 새로운 역할들을 가져옵니다**!
+
+1. **액션**을 위한 새로운 역할
+2. **관찰**을 위한 새로운 역할
+
+[Mistral API](https://docs.mistral.ai/capabilities/function_calling/)를 예시로 들면 다음과 같습니다:
+
+```python
+conversation = [
+    {
+        "role": "user",
+        "content": "What's the status of my transaction T1001?"
+    },
+    {
+        "role": "assistant",
+        "content": "",
+        "function_call": {
+            "name": "retrieve_payment_status",
+            "arguments": "{\"transaction_id\": \"T1001\"}"
+        }
+    },
+    {
+        "role": "tool",
+        "name": "retrieve_payment_status",
+        "content": "{\"status\": \"Paid\"}"
+    },
+    {
+        "role": "assistant",
+        "content": "Your transaction T1001 has been successfully paid."
+    }
+]
+```
+
+> ... 하지만 함수 호출을 위한 새로운 역할이 있다고 하셨죠?
+
+**네, 그리고 아닙니다**. 이 경우와 많은 다른 API들에서, 모델은 취할 액션을 "assistant" 메시지로 포맷팅합니다. 채팅 템플릿은 이를 함수 호출을 위한 **특수 토큰**으로 표현할 것입니다.
+
+- `[AVAILABLE_TOOLS]` – 사용 가능한 도구 목록의 시작  
+- `[/AVAILABLE_TOOLS]` – 사용 가능한 도구 목록의 끝  
+- `[TOOL_CALLS]` – 도구 호출 (즉, "액션" 취하기)  
+- `[TOOL_RESULTS]` – 액션의 결과 "관찰"하기  
+- `[/TOOL_RESULTS]` – 관찰의 끝 (즉, 모델이 다시 디코딩할 수 있음)
+
+이 과정에서 함수 호출에 대해 다시 이야기할 것이지만, 더 깊이 알고 싶으시다면 [이 훌륭한 문서 섹션](https://docs.mistral.ai/capabilities/function_calling/)을 확인해보세요.
+
+---
+이제 함수 호출이 무엇이고 어떻게 작동하는지 배웠으니, 아직 이러한 능력이 없는 모델인 [google/gemma-2-2b-it](https://huggingface.co/google/gemma-2-2b-it)에 **함수 호출 기능을 추가**해보겠습니다. 모델에 새로운 특수 토큰들을 추가함으로써 가능합니다.
+
+이를 위해서는 **먼저 파인튜닝과 LoRA를 이해해야 합니다**. 

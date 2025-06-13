@@ -1,0 +1,126 @@
+# LangGraph의 구성 요소
+
+LangGraph로 애플리케이션을 구축하려면 핵심 구성 요소를 이해해야 합니다. LangGraph 애플리케이션을 구성하는 기본 구성 요소들을 살펴보겠습니다.
+
+<img src="https://huggingface.co/datasets/agents-course/course-images/resolve/main/en/unit2/LangGraph/Building_blocks.png" alt="구성 요소" width="70%"/>
+
+LangGraph의 애플리케이션은 **진입점**에서 시작하여, 실행에 따라 흐름이 하나의 함수에서 다른 함수로 이동하다가 END에 도달합니다.
+
+<img src="https://huggingface.co/datasets/agents-course/course-images/resolve/main/en/unit2/LangGraph/application.png" alt="애플리케이션"/>
+
+## 1. 상태
+
+**상태**는 LangGraph의 중심 개념입니다. 애플리케이션을 통해 흐르는 모든 정보를 나타냅니다.
+
+```python
+from typing_extensions import TypedDict
+
+class State(TypedDict):
+    graph_state: str
+```
+
+상태는 **사용자가 정의**하므로, 의사 결정 프로세스에 필요한 모든 데이터를 포함하도록 필드를 신중하게 설계해야 합니다!
+
+> 💡 **팁:** 애플리케이션이 단계 간에 어떤 정보를 추적해야 하는지 신중하게 생각하세요.
+
+## 2. 노드
+
+**노드**는 파이썬 함수입니다. 각 노드는:
+- 상태를 입력으로 받음
+- 어떤 작업을 수행
+- 상태에 대한 업데이트를 반환
+
+```python
+def node_1(state):
+    print("---노드 1---")
+    return {"graph_state": state['graph_state'] +" 나는"}
+
+def node_2(state):
+    print("---노드 2---")
+    return {"graph_state": state['graph_state'] +" 행복해!"}
+
+def node_3(state):
+    print("---노드 3---")
+    return {"graph_state": state['graph_state'] +" 슬퍼!"}
+```
+
+예를 들어, 노드는 다음을 포함할 수 있습니다:
+- **LLM 호출**: 텍스트 생성 또는 결정 내리기
+- **도구 호출**: 외부 시스템과 상호작용
+- **조건부 로직**: 다음 단계 결정
+- **인간 개입**: 사용자로부터 입력 받기
+
+> 💡 **정보:** START와 END와 같이 전체 워크플로우에 필요한 일부 노드는 langGraph에서 직접 제공됩니다.
+
+## 3. 엣지
+
+**엣지**는 노드를 연결하고 그래프를 통과하는 가능한 경로를 정의합니다:
+
+```python
+import random
+from typing import Literal
+
+def decide_mood(state) -> Literal["node_2", "node_3"]:
+    
+    # 종종 다음에 방문할 노드를 결정하기 위해 상태를 사용합니다
+    user_input = state['graph_state'] 
+    
+    # 여기서는 노드 2와 3 사이를 50/50으로 나누어보겠습니다
+    if random.random() < 0.5:
+
+        # 50%의 확률로 노드 2를 반환
+        return "node_2"
+    
+    # 50%의 확률로 노드 3을 반환
+    return "node_3"
+```
+
+엣지는 다음과 같을 수 있습니다:
+- **직접**: 항상 노드 A에서 노드 B로 이동
+- **조건부**: 현재 상태를 기반으로 다음 노드 선택
+
+## 4. StateGraph
+
+**StateGraph**는 전체 에이전트 워크플로우를 담는 컨테이너입니다:
+
+```python
+from IPython.display import Image, display
+from langgraph.graph import StateGraph, START, END
+
+# 그래프 구축
+builder = StateGraph(State)
+builder.add_node("node_1", node_1)
+builder.add_node("node_2", node_2)
+builder.add_node("node_3", node_3)
+
+# 로직
+builder.add_edge(START, "node_1")
+builder.add_conditional_edges("node_1", decide_mood)
+builder.add_edge("node_2", END)
+builder.add_edge("node_3", END)
+
+# 추가
+graph = builder.compile()
+```
+
+이를 시각화할 수 있습니다!
+```python
+# 보기
+display(Image(graph.get_graph().draw_mermaid_png()))
+```
+<img src="https://huggingface.co/datasets/agents-course/course-images/resolve/main/en/unit2/LangGraph/basic_graph.jpeg" alt="그래프 시각화"/>
+
+하지만 가장 중요한 것은 실행입니다:
+```python
+graph.invoke({"graph_state" : "안녕하세요, 저는 Lance입니다."})
+```
+출력:
+```
+---노드 1---
+---노드 3---
+{'graph_state': '안녕하세요, 저는 Lance입니다. 나는 슬퍼!'}
+```
+
+## 다음은?
+
+다음 섹션에서는 이러한 개념을 실제로 적용하여 첫 번째 그래프를 만들어볼 것입니다. 이 그래프는 Alfred가 이메일을 받아서 분류하고, 정상적인 이메일인 경우 예비 답변을 작성할 수 있게 해줍니다.
